@@ -49,14 +49,21 @@
 
   const provider = new GoogleAuthProvider();
 
-  onAuthStateChanged(auth, user => {
+const signOutBtn = document.getElementById("sign-out");
+
+onAuthStateChanged(auth, user => {
+  const todoList = document.getElementById("todo-list");
+  const emailDisplay = document.createElement("p");
+
   if (user) {
-    document.body.innerHTML += `<p>Logged in as ${user.email}</p>`;
+    emailDisplay.textContent = `Logged in as ${user.email}`;
+    document.body.insertBefore(emailDisplay, signOutBtn);
+    signOutBtn.style.display = "inline-block";
 
     const todosRef = collection(db, "todos");
     const q = query(todosRef, where("uid", "==", user.uid));
+
     onSnapshot(q, snapshot => {
-      const todoList = document.getElementById("todo-list");
       todoList.innerHTML = "";
       snapshot.forEach(doc => {
         const li = document.createElement("li");
@@ -78,10 +85,18 @@
     };
 
   } else {
-    // Only sign in if not already logged in
     signInWithPopup(auth, provider).catch(console.error);
   }
 });
+
+signOutBtn.addEventListener("click", () => {
+  signOut(auth)
+    .then(() => {
+      location.reload(); // Reload to reset UI state
+    })
+    .catch(console.error);
+});
+
 
 
   // CTFTime API
