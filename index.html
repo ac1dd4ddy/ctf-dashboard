@@ -100,7 +100,8 @@ signOutBtn.addEventListener("click", () => {
 
 
   // CTFTime API
-  fetch("https://ctftime.org/api/v1/events/?limit=5")
+  const corsProxy = "https://corsproxy.io/?url=";
+  fetch(`${corsProxy}https://ctftime.org/api/v1/events/?limit=5`)
     .then(res => res.json())
     .then(data => {
       const list = document.getElementById("ctf-list");
