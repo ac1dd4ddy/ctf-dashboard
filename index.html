@@ -1,13 +1,108 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>CTF Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <script src="index.js"></script>
-  </body>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>CTF Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Ac1d's Dashboard</h1>
+
+  <section>
+    <h2>Upcoming CTFs</h2>
+    <ul id="ctf-list"></ul>
+  </section>
+
+  <section>
+    <h2>Team Progress</h2>
+    <pre id="progress"></pre>
+  </section>
+
+  <section>
+    <h2>TODO</h2>
+    <ul id="todo-list"></ul>
+    <input id="todo-input" placeholder="Add a task" />
+    <button onclick="addTodo()">Add</button>
+  </section>
+
+  <button id="sign-out" style="display: none;">Sign Out</button>
+
+  <!-- <script src="script.js"></script> -->
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD8G-YzVnERa6if7BgY1WXrR-j3CcF-Xos",
+    authDomain: "ac1dd4ddy-ctf-dashboard.firebaseapp.com",
+    projectId: "ac1dd4ddy-ctf-dashboard",
+    storageBucket: "ac1dd4ddy-ctf-dashboard.firebasestorage.app",
+    messagingSenderId: "889353172004",
+    appId: "1:889353172004:web:440d2f318930d0587f14b1",
+    measurementId: "G-W555LTLJMS"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const db = getFirestore();
+
+  const provider = new GoogleAuthProvider();
+
+  onAuthStateChanged(auth, user => {
+  if (user) {
+    document.body.innerHTML += `<p>Logged in as ${user.email}</p>`;
+
+    const todosRef = collection(db, "todos");
+    const q = query(todosRef, where("uid", "==", user.uid));
+    onSnapshot(q, snapshot => {
+      const todoList = document.getElementById("todo-list");
+      todoList.innerHTML = "";
+      snapshot.forEach(doc => {
+        const li = document.createElement("li");
+        li.textContent = doc.data().text;
+        todoList.appendChild(li);
+      });
+    });
+
+    window.addTodo = async function () {
+      const input = document.getElementById("todo-input");
+      if (input.value.trim()) {
+        await addDoc(todosRef, {
+          text: input.value,
+          createdAt: serverTimestamp(),
+          uid: user.uid
+        });
+        input.value = "";
+      }
+    };
+
+  } else {
+    // Only sign in if not already logged in
+    signInWithPopup(auth, provider).catch(console.error);
+  }
+});
+
+
+  // CTFTime API
+  fetch("https://ctftime.org/api/v1/events/?limit=5")
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("ctf-list");
+      data.forEach(ctf => {
+        const item = document.createElement("li");
+        item.innerHTML = `<a href="${ctf.url}" target="_blank">${ctf.title}</a> - ${ctf.start.slice(0, 10)}`;
+        list.appendChild(item);
+      });
+    });
+
+  // Load progress.json
+  fetch("data/progress.json")
+    .then(res => res.json())
+    .then(progress => {
+      document.getElementById("progress").textContent = JSON.stringify(progress, null, 2);
+    });
+  </script>
+
+</body>
 </html>
