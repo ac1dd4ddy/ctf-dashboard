@@ -411,6 +411,9 @@ function initializeLayout() {
     } else if (moduleId === 'tickets') {
       width = '500px';
       height = '450px';
+    } else if (moduleId === 'knowledge') {
+      width = '350px';
+      height = '200px';
     }
     
     section.style.left = `${snapToGrid((index % 2) * 420 + 20)}px`;
