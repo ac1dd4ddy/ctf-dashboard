@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD8G-YzVnERa6if7BgY1WXrR-j3CcF-Xos",
@@ -51,9 +51,18 @@ function loadUserNotes(uid) {
   
   onSnapshot(q, snapshot => {
     notesList.innerHTML = "";
-    snapshot.forEach(doc => {
+    snapshot.forEach(docSnapshot => {
       const li = document.createElement("li");
-      li.textContent = doc.data().text;
+      li.textContent = docSnapshot.data().text;
+      li.style.cursor = "pointer";
+      li.title = "Click to delete";
+      li.addEventListener("mouseenter", () => li.style.backgroundColor = "#ffcccc");
+      li.addEventListener("mouseleave", () => li.style.backgroundColor = "#f7fafc");
+      li.addEventListener("click", async () => {
+        if (confirm("Delete this note?")) {
+          await deleteDoc(doc(db, "notes", docSnapshot.id));
+        }
+      });
       notesList.appendChild(li);
     });
   }, error => {
