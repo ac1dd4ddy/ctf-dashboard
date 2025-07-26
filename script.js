@@ -533,3 +533,31 @@ async function loadLayout() {
 // Initialize
 loadUpcomingCTFs();
 initializeLayout();
+
+// Hide drag hint after 5 seconds
+setTimeout(() => {
+  const hint = document.getElementById("drag-hint");
+  if (hint) {
+    hint.style.opacity = "0";
+    hint.style.transition = "opacity 0.5s ease";
+    setTimeout(() => hint.remove(), 500);
+  }
+}, 5000);
+
+// Hide user display and popup note after 20 seconds
+setTimeout(() => {
+  const userDisplay = document.getElementById("user-display");
+  const popupNote = document.querySelector('p[style*="opacity: 0.8"]');
+  
+  if (userDisplay) {
+    userDisplay.style.opacity = "0";
+    userDisplay.style.transition = "opacity 0.5s ease";
+    setTimeout(() => userDisplay.remove(), 500);
+  }
+  
+  if (popupNote) {
+    popupNote.style.opacity = "0";
+    popupNote.style.transition = "opacity 0.5s ease";
+    setTimeout(() => popupNote.remove(), 500);
+  }
+}, 20000);
