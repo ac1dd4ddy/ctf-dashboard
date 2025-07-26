@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>CTF Dashboard - Help</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .help-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    body.dark .help-container {
+      background: #14191f;
+    }
+    .help-section {
+      margin-bottom: 30px;
+    }
+    .help-section h3 {
+      color: #ff8f40;
+      margin-bottom: 15px;
+    }
+    body.dark .help-section h3 {
+      color: #ffb454;
+    }
+    .back-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #ff8f40;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .back-btn:hover {
+      background: #f29718;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-btn">← Back to Dashboard</a>
+  
+  <button id="theme-toggle" style="position: fixed; top: 20px; right: 80px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🌙</button>
+
+  <h1>CTF Dashboard Help</h1>
+
+  <div class="help-container">
+    <div class="help-section">
+      <h3>🎯 Getting Started</h3>
+      <p>1. Sign in with your Google account</p>
+      <p>2. Your modules will appear and can be moved around</p>
+      <p>3. All changes are automatically saved to your account</p>
+    </div>
+
+    <div class="help-section">
+      <h3>📱 Module Management</h3>
+      <p><strong>Moving Modules:</strong> Click and drag any module to move it around the screen. Modules snap to a 20px grid.</p>
+      <p><strong>Resizing Modules:</strong> Use the orange handle in the bottom-right corner to resize modules.</p>
+      <p><strong>Layout Saving:</strong> Your layout is automatically saved and restored when you log back in.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🏆 Upcoming CTFs</h3>
+      <p><strong>View Events:</strong> See upcoming CTF competitions with dates, times (in CDT), and descriptions.</p>
+      <p><strong>Click to Visit:</strong> Click any CTF card to open the event website in a new tab.</p>
+      <p><strong>Auto-Update:</strong> Events are fetched from CTFTime API automatically.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>📊 Team Progress</h3>
+      <p><strong>Add CTFs:</strong> Click the "+" button to add a new CTF to track.</p>
+      <p><strong>Update Status:</strong> Use the dropdown to change status (Planned/In Progress/Completed).</p>
+      <p><strong>Delete CTFs:</strong> Click on the CTF name (it turns red) to delete it.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>📝 Personal Notes</h3>
+      <p><strong>Add Notes:</strong> Type in the input field and click "Add".</p>
+      <p><strong>Delete Notes:</strong> Click on any note (it turns red) to delete it with confirmation.</p>
+      <p><strong>Private:</strong> Only you can see your personal notes.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🤝 Collaborative Notes</h3>
+      <p><strong>Create Team:</strong> Enter a team name and password, then click "Create".</p>
+      <p><strong>Join Team:</strong> Enter existing team credentials and click "Join".</p>
+      <p><strong>Real-time Editing:</strong> Multiple users can edit the same document simultaneously.</p>
+      <p><strong>Save Snapshots:</strong> Enter a name and click "Save Snapshot" to save the current state.</p>
+      <p><strong>Load Snapshots:</strong> Select from the dropdown and click "Load Snapshot" to restore.</p>
+      <p><strong>Leave Team:</strong> Click "Leave Team" to exit collaborative mode.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🌙 Theme System</h3>
+      <p><strong>Toggle Themes:</strong> Click the moon/sun icon in the top-left to switch between light and dark mode.</p>
+      <p><strong>Ayu Colors:</strong> Uses Ayu Light and Ayu Dark color schemes.</p>
+      <p><strong>Persistent:</strong> Your theme choice is saved locally.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>💡 Tips & Tricks</h3>
+      <p>• Enable popups in your browser for CTF links to work</p>
+      <p>• Use descriptive names for snapshots to find them easily</p>
+      <p>• Share team credentials securely with your teammates</p>
+      <p>• The dashboard works on mobile devices too</p>
+      <p>• All data syncs in real-time without refreshing</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🔧 Troubleshooting</h3>
+      <p><strong>Layout not saving:</strong> Make sure you're logged in with Google</p>
+      <p><strong>CTFs not loading:</strong> Check your internet connection</p>
+      <p><strong>Can't join team:</strong> Verify the team name and password are correct</p>
+      <p><strong>Popups blocked:</strong> Enable popups for this site in browser settings</p>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      const isDark = document.body.classList.contains("dark");
+      document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    });
+
+    // Load saved theme
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark");
+      document.getElementById("theme-toggle").textContent = "☀️";
+    }
+  </script>
+</body>
+</html>
