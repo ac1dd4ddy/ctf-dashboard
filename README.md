@@ -2,15 +2,6 @@
 
 A comprehensive, customizable dashboard designed specifically for Capture The Flag (CTF) teams. This platform combines event tracking, team collaboration, progress management, and support systems into a unified workspace that adapts to your team's workflow.
 
-## Why CTF Teams Need This Dashboard
-
-CTF competitions require coordination, planning, and real-time collaboration. This dashboard addresses common challenges:
-- **Event Discovery**: Never miss important CTF competitions
-- **Team Coordination**: Collaborate in real-time during competitions
-- **Progress Tracking**: Monitor individual and team progress across multiple events
-- **Knowledge Management**: Preserve strategies, notes, and solutions
-- **Support System**: Handle team issues and requests efficiently
-
 ## Core Features
 
 ### 🎯 CTF Event Tracking
@@ -67,7 +58,7 @@ The dashboard uses modern web technologies to provide a seamless experience:
 - **Client-side Storage**: Layout preferences and themes are stored locally for instant loading
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
 
-## Perfect for CTF Teams Because
+## Perfect for CTF Teams
 
 ### During Competitions
 - **Centralized Information**: All team members see the same up-to-date information
@@ -89,7 +80,7 @@ The dashboard uses modern web technologies to provide a seamless experience:
 
 ## Quick Start
 
-1. **Access**: Open `index.html` in any modern web browser
+1. **Access**: Open `https://ac1dd4ddy.github.io/ctf-dashboard` in any modern web browser
 2. **Authenticate**: Sign in with your Google account
 3. **Customize**: Drag modules to your preferred positions and sizes
 4. **Collaborate**: Create or join team collaboration spaces
