@@ -132,8 +132,28 @@ function loadUpcomingCTFs() {
     .then(res => res.json())
     .then(data => {
       data.forEach(ctf => {
+        const startDate = new Date(ctf.start);
+        const cdtTime = startDate.toLocaleString("en-US", {
+          timeZone: "America/Chicago",
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short"
+        });
+        
+        const duration = ctf.duration.days + (ctf.duration.hours > 0 ? ` days ${ctf.duration.hours}h` : " days");
+        
         const item = document.createElement("li");
-        item.innerHTML = `<a href="${ctf.url}" target="_blank">${ctf.title}</a> - ${ctf.start.slice(0, 10)}`;
+        item.innerHTML = `
+          <div>
+            <strong><a href="${ctf.url}" target="_blank">${ctf.title}</a></strong><br>
+            <small>${cdtTime} • ${duration}</small><br>
+            <em>${ctf.description || "No description available"}</em>
+          </div>
+        `;
         ctfList.appendChild(item);
       });
     })
