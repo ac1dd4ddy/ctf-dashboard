@@ -7,10 +7,55 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
-  color: #333;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #5c6773;
+  background: linear-gradient(135deg, #fafafa 0%, #fcfcfc 100%);
   min-height: 100vh;
   padding: 20px;
+  transition: all 0.3s ease;
+}
+
+body.dark {
+  color: #bfbdb6;
+  background: linear-gradient(135deg, #0a0e14 0%, #0d1117 100%);
+}
+
+body.dark section {
+  background: #1f2430;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+body.dark h2 {
+  color: #e6b450;
+  border-bottom-color: #39414f;
+}
+
+body.dark li {
+  background: #242936;
+  border-left-color: #ffcc66;
+}
+
+body.dark li:hover {
+  background: #2d3748;
+}
+
+body.dark input {
+  background: #242936;
+  border-color: #39414f;
+  color: #bfbdb6;
+}
+
+body.dark select {
+  background: #242936;
+  border-color: #39414f;
+  color: #bfbdb6;
+}
+
+body.dark a {
+  color: #39bae6;
+}
+
+body.dark a:hover {
+  color: #73d0ff;
 }
 
 .grid-container {
@@ -25,24 +70,39 @@ body {
 
 h1 {
   text-align: center;
-  color: white;
+  color: #5c6773;
   margin-bottom: 30px;
   font-size: 2.5rem;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  text-shadow: none;
+}
+
+body.dark h1 {
+  color: #bfbdb6;
 }
 
 section {
-  background: white;
+  background: #fcfcfc;
   padding: 25px;
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+body.dark section {
+  background: #14191f;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 h2 {
-  color: #4a5568;
+  color: #5c6773;
   margin-bottom: 15px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid #e7e8e9;
   padding-bottom: 10px;
+}
+
+body.dark h2 {
+  color: #bfbdb6;
+  border-bottom-color: #1f2430;
 }
 
 ul {
@@ -52,49 +112,74 @@ ul {
 li {
   padding: 10px;
   margin: 8px 0;
-  background: #f7fafc;
+  background: #f3f4f5;
   border-radius: 5px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #ff8f40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-li:hover {
-  background: #edf2f7;
-  transform: translateX(5px);
   transition: all 0.2s ease;
 }
 
+body.dark li {
+  background: #1f2430;
+  border-left-color: #ffb454;
+}
+
+li:hover {
+  background: #e7e8e9;
+  transform: translateX(5px);
+}
+
+body.dark li:hover {
+  background: #2d3640;
+}
+
 a {
-  color: #667eea;
+  color: #ff8f40;
   text-decoration: none;
   font-weight: 500;
 }
 
+body.dark a {
+  color: #ffb454;
+}
+
 a:hover {
-  color: #764ba2;
+  color: #f29718;
   text-decoration: underline;
+}
+
+body.dark a:hover {
+  color: #ff8f40;
 }
 
 input {
   padding: 12px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #e7e8e9;
   border-radius: 5px;
   font-size: 16px;
   width: 70%;
   margin-right: 10px;
+  background: #fcfcfc;
+  color: #5c6773;
+}
+
+body.dark input {
+  background: #0d1117;
+  border-color: #1f2430;
+  color: #bfbdb6;
 }
 
 input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #ff8f40;
+  box-shadow: 0 0 0 3px rgba(255, 143, 64, 0.1);
 }
 
 button {
   padding: 12px 20px;
-  background: #667eea;
+  background: #ff8f40;
   color: white;
   border: none;
   border-radius: 5px;
@@ -105,38 +190,49 @@ button {
 }
 
 button:hover {
-  background: #5a67d8;
+  background: #f29718;
 }
 
 select {
   padding: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e7e8e9;
   border-radius: 4px;
-  background: white;
+  background: #fcfcfc;
   cursor: pointer;
+  color: #5c6773;
+}
+
+body.dark select {
+  background: #14191f;
+  border-color: #1f2430;
+  color: #bfbdb6;
 }
 
 select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #ff8f40;
 }
 
 #sign-out {
   position: fixed;
   top: 20px;
   right: 20px;
-  background: #e53e3e;
+  background: #f51818;
 }
 
 #sign-out:hover {
-  background: #c53030;
+  background: #d73a49;
 }
 
 p {
-  color: white;
+  color: #5c6773;
   text-align: center;
   margin: 10px 0;
   font-weight: 500;
+}
+
+body.dark p {
+  color: #bfbdb6;
 }
 
 @media (max-width: 768px) {

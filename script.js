@@ -213,5 +213,19 @@ function loadUpcomingCTFs() {
     .catch(console.error);
 }
 
+// Theme toggle
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+});
+
+// Load saved theme
+if (localStorage.getItem("theme") === "dark") {
+  document.body.classList.add("dark");
+  document.getElementById("theme-toggle").textContent = "☀️";
+}
+
 // Initialize
 loadUpcomingCTFs();
