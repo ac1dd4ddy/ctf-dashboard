@@ -1,96 +1,144 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-
-// TODO: Add SDKs for Firebase products that you want to use
-
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-
-// Your web app's Firebase configuration
-
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
-
   apiKey: "AIzaSyD8G-YzVnERa6if7BgY1WXrR-j3CcF-Xos",
-
   authDomain: "ac1dd4ddy-ctf-dashboard.firebaseapp.com",
-
   projectId: "ac1dd4ddy-ctf-dashboard",
-
   storageBucket: "ac1dd4ddy-ctf-dashboard.firebasestorage.app",
-
   messagingSenderId: "889353172004",
-
   appId: "1:889353172004:web:440d2f318930d0587f14b1",
-
   measurementId: "G-W555LTLJMS"
-
 };
 
-
-// Initialize Firebase
-
 const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
+const provider = new GoogleAuthProvider();
 
-const analytics = getAnalytics(app);
+// DOM Elements
+const signOutBtn = document.getElementById("sign-out");
+const notesList = document.getElementById("Notes-list");
+const progressList = document.getElementById("progress-list");
+const ctfList = document.getElementById("ctf-list");
 
-// Fetch upcoming CTFs
-fetch("https://ctftime.org/api/v1/events/?limit=5")
-  .then(res => res.json())
-  .then(data => {
-    const list = document.getElementById("ctf-list");
-    data.forEach(ctf => {
-      const item = document.createElement("li");
-      item.innerHTML = `<a href="${ctf.url}" target="_blank">${ctf.title}</a> - ${ctf.start.slice(0, 10)}`;
-      list.appendChild(item);
-    });
-  });
-
-// Load team progress
-fetch("data/progress.json")
-  .then(res => res.json())
-  .then(progress => {
-    document.getElementById("progress").textContent = JSON.stringify(progress, null, 2);
-  });
-
-// Simple in-browser TODO list
-let todos = JSON.parse(localStorage.getItem("todos") || "[]");
-const list = document.getElementById("todo-list");
-function renderTodos() {
-  list.innerHTML = "";
-  todos.forEach((todo, i) => {
-    const li = document.createElement("li");
-    li.textContent = todo;
-    li.onclick = () => {
-      todos.splice(i, 1);
-      localStorage.setItem("todos", JSON.stringify(todos));
-      renderTodos();
-    };
-    list.appendChild(li);
-  });
-}
-function addTodo() {
-  const input = document.getElementById("todo-input");
-  todos.push(input.value);
-  localStorage.setItem("todos", JSON.stringify(todos));
-  input.value = "";
-  renderTodos();
-}
-renderTodos();
-// Sign In
-auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-
-// Sign Out
-auth.signOut();
-
-// Detect auth state
-auth.onAuthStateChanged(user => {
+// Authentication
+onAuthStateChanged(auth, user => {
   if (user) {
-    document.body.innerHTML += `<p>Logged in as ${user.email}</p>`;
+    const emailDisplay = document.createElement("p");
+    emailDisplay.textContent = `Logged in as ${user.email}`;
+    document.body.insertBefore(emailDisplay, signOutBtn);
+    signOutBtn.style.display = "inline-block";
+    
+    loadUserNotes(user.uid);
+    loadProgress();
   } else {
-    console.log("Not signed in");
+    signInWithPopup(auth, provider).catch(console.error);
   }
 });
+
+signOutBtn.addEventListener("click", () => {
+  signOut(auth)
+    .then(() => location.reload())
+    .catch(console.error);
+});
+
+// Notes functionality
+function loadUserNotes(uid) {
+  const notesRef = collection(db, "notes");
+  const q = query(notesRef, where("uid", "==", uid));
+  
+  onSnapshot(q, snapshot => {
+    notesList.innerHTML = "";
+    snapshot.forEach(doc => {
+      const li = document.createElement("li");
+      li.textContent = doc.data().text;
+      notesList.appendChild(li);
+    });
+  }, error => {
+    console.error("Error loading notes:", error);
+    notesList.innerHTML = "<li>Error loading notes. Check Firestore rules.</li>";
+  });
+}
+
+window.addNotes = async function() {
+  const input = document.getElementById("Notes-input");
+  const user = auth.currentUser;
+  
+  if (input.value.trim() && user) {
+    try {
+      await addDoc(collection(db, "notes"), {
+        text: input.value,
+        createdAt: serverTimestamp(),
+        uid: user.uid
+      });
+      input.value = "";
+    } catch (error) {
+      console.error("Error adding note:", error);
+      alert("Error adding note. Check Firestore rules.");
+    }
+  }
+};
+
+// Progress functionality
+async function loadProgress() {
+  try {
+    const progressRef = doc(db, "progress", "team");
+    const snapshot = await getDoc(progressRef);
+    const data = snapshot.exists() ? snapshot.data() : {
+      "HackTheBox": "Completed",
+      "picoCTF": "In Progress",
+      "BDSec July 2025": "Planned"
+    };
+    
+    progressList.innerHTML = "";
+    
+    Object.entries(data).forEach(([ctf, status]) => {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = `${ctf}: `;
+      
+      const select = document.createElement("select");
+      ["Planned", "In Progress", "Completed"].forEach(optionValue => {
+        const option = document.createElement("option");
+        option.value = option.textContent = optionValue;
+        if (optionValue === status) option.selected = true;
+        select.appendChild(option);
+      });
+      
+      select.addEventListener("change", async () => {
+        try {
+          await updateDoc(progressRef, { [ctf]: select.value });
+        } catch (error) {
+          console.error("Error updating progress:", error);
+        }
+      });
+      
+      li.appendChild(label);
+      li.appendChild(select);
+      progressList.appendChild(li);
+    });
+  } catch (error) {
+    console.error("Error loading progress:", error);
+    progressList.innerHTML = "<li>Using default progress data</li>";
+  }
+}
+
+// CTF API functionality
+function loadUpcomingCTFs() {
+  const corsProxy = "https://corsproxy.io/?url=";
+  fetch(`${corsProxy}https://ctftime.org/api/v1/events/?limit=5`)
+    .then(res => res.json())
+    .then(data => {
+      data.forEach(ctf => {
+        const item = document.createElement("li");
+        item.innerHTML = `<a href="${ctf.url}" target="_blank">${ctf.title}</a> - ${ctf.start.slice(0, 10)}`;
+        ctfList.appendChild(item);
+      });
+    })
+    .catch(console.error);
+}
+
+// Initialize
+loadUpcomingCTFs();
