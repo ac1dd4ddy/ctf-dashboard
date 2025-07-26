@@ -23,6 +23,10 @@ const notesList = document.getElementById("Notes-list");
 const progressList = document.getElementById("progress-list");
 const ctfList = document.getElementById("ctf-list");
 
+// Global team state
+let currentTeam = null;
+let teamUnsubscribes = [];
+
 // Authentication
 onAuthStateChanged(auth, user => {
   if (user) {
@@ -30,9 +34,16 @@ onAuthStateChanged(auth, user => {
     signOutBtn.style.display = "inline-block";
     
     loadUserNotes(user.uid);
-    loadUserProgress(user.uid);
     loadUserTickets(user.email);
-    loadLayout();
+    loadUpcomingCTFs();
+    document.getElementById("team-login").style.display = "block";
+    resetTeamProgress();
+    loadUserTeamState(user.uid);
+    
+    // Initialize layout after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      loadLayout();
+    }, 500);
   } else {
     signInWithPopup(auth, provider).catch(console.error);
   }
@@ -97,13 +108,15 @@ window.addNotes = async function() {
   }
 };
 
-// Progress functionality
-function loadUserProgress(uid) {
-  const progressRef = collection(db, "progress");
-  const q = query(progressRef, where("uid", "==", uid));
+// Team progress functionality
+function initTeamProgress(teamName) {
+  const progressRef = collection(db, "team_progress");
+  const q = query(progressRef, where("teamName", "==", teamName));
   
-  onSnapshot(q, snapshot => {
+  const unsubscribe = onSnapshot(q, snapshot => {
+    const progressList = document.getElementById("progress-list");
     progressList.innerHTML = "";
+    
     snapshot.forEach(docSnapshot => {
       const data = docSnapshot.data();
       const li = document.createElement("li");
@@ -121,7 +134,7 @@ function loadUserProgress(uid) {
       });
       label.addEventListener("click", async () => {
         if (confirm(`Delete ${data.ctf}?`)) {
-          await deleteDoc(doc(db, "progress", docSnapshot.id));
+          await deleteDoc(doc(db, "team_progress", docSnapshot.id));
         }
       });
       
@@ -134,7 +147,7 @@ function loadUserProgress(uid) {
       });
       
       select.addEventListener("change", async () => {
-        await updateDoc(doc(db, "progress", docSnapshot.id), { status: select.value });
+        await updateDoc(doc(db, "team_progress", docSnapshot.id), { status: select.value });
       });
       
       li.appendChild(label);
@@ -150,25 +163,33 @@ function loadUserProgress(uid) {
     addLi.style.justifyContent = "center";
     addLi.addEventListener("click", () => {
       const ctfName = prompt("Enter CTF name:");
-      if (ctfName) addProgress(uid, ctfName);
+      if (ctfName) addTeamProgress(teamName, ctfName);
     });
     progressList.appendChild(addLi);
   }, error => {
-    console.error("Error loading progress:", error);
-    progressList.innerHTML = "<li>Error loading progress. Check Firestore rules.</li>";
+    console.error("Error loading team progress:", error);
+    progressList.innerHTML = "<li>Error loading team progress. Check Firestore rules.</li>";
   });
+  
+  teamUnsubscribes.push(unsubscribe);
 }
 
-async function addProgress(uid, ctfName) {
+function resetTeamProgress() {
+  const progressList = document.getElementById("progress-list");
+  progressList.innerHTML = "<li style='text-align: center; color: #666; font-style: italic;'>Please join a team from top right corner</li>";
+}
+
+async function addTeamProgress(teamName, ctfName) {
   try {
-    await addDoc(collection(db, "progress"), {
+    await addDoc(collection(db, "team_progress"), {
       ctf: ctfName,
       status: "Planned",
-      uid: uid,
-      createdAt: serverTimestamp()
+      teamName: teamName,
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser.email
     });
   } catch (error) {
-    console.error("Error adding progress:", error);
+    console.error("Error adding team progress:", error);
     alert("Error adding CTF. Check Firestore rules.");
   }
 }
@@ -214,34 +235,51 @@ function loadUpcomingCTFs() {
     .catch(console.error);
 }
 
-// Collaborative notes
-let currentTeam = null;
-let collabUnsubscribe = null;
-
-window.createTeam = async function() {
-  const teamName = document.getElementById("team-name").value.trim();
-  const password = document.getElementById("team-password").value;
+// Consolidated team system
+window.createGlobalTeam = async function() {
+  const teamName = document.getElementById("global-team-name").value.trim();
+  const password = document.getElementById("global-team-password").value;
   
-  if (!teamName || !password) {
-    alert("Please enter team name and password");
+  if (!teamName || !password || teamName.length < 3 || password.length < 6) {
+    alert("Team name must be at least 3 characters and password at least 6 characters");
+    return;
+  }
+  
+  if (!/^[a-zA-Z0-9_-]+$/.test(teamName)) {
+    alert("Team name can only contain letters, numbers, hyphens, and underscores");
     return;
   }
   
   try {
+    const teamDoc = await getDoc(doc(db, "teams", teamName));
+    if (teamDoc.exists()) {
+      alert("Team already exists");
+      return;
+    }
+    
     await setDoc(doc(db, "teams", teamName), {
       password: password,
       content: "",
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser.uid
+    });
+    
+    await setDoc(doc(db, "team_challenges", teamName), {
+      challenges: [],
+      members: [auth.currentUser.email],
       createdAt: serverTimestamp()
     });
-    joinTeamSession(teamName);
+    
+    joinGlobalTeam();
   } catch (error) {
-    alert("Team already exists or error creating team");
+    console.error("Error creating team:", error);
+    alert("Error creating team");
   }
 };
 
-window.joinTeam = async function() {
-  const teamName = document.getElementById("team-name").value.trim();
-  const password = document.getElementById("team-password").value;
+window.joinGlobalTeam = async function() {
+  const teamName = document.getElementById("global-team-name").value.trim();
+  const password = document.getElementById("global-team-password").value;
   
   if (!teamName || !password) {
     alert("Please enter team name and password");
@@ -251,54 +289,150 @@ window.joinTeam = async function() {
   try {
     const teamDoc = await getDoc(doc(db, "teams", teamName));
     if (teamDoc.exists() && teamDoc.data().password === password) {
-      joinTeamSession(teamName);
+      currentTeam = teamName;
+      updateTeamUI(true);
+      initializeAllTeamModules(teamName);
+      await saveUserTeamState(auth.currentUser.uid, teamName);
     } else {
       alert("Invalid team name or password");
     }
   } catch (error) {
+    console.error("Error joining team:", error);
     alert("Error joining team");
   }
 };
 
-function joinTeamSession(teamName) {
-  currentTeam = teamName;
+window.leaveGlobalTeam = async function() {
+  if (currentTeam) {
+    teamUnsubscribes.forEach(unsubscribe => unsubscribe());
+    teamUnsubscribes = [];
+    currentTeam = null;
+    updateTeamUI(false);
+    resetAllTeamModules();
+    await saveUserTeamState(auth.currentUser.uid, null);
+  }
+};
+
+function updateTeamUI(isLoggedIn) {
+  const loginDiv = document.getElementById("team-login");
+  const statusDiv = document.getElementById("team-status");
+  const statusText = document.getElementById("team-status-text");
+  
+  if (isLoggedIn) {
+    loginDiv.style.display = "none";
+    statusDiv.style.display = "block";
+    statusText.textContent = `Team: ${currentTeam}`;
+    document.getElementById("global-team-name").value = "";
+    document.getElementById("global-team-password").value = "";
+  } else {
+    loginDiv.style.display = "block";
+    statusDiv.style.display = "none";
+  }
+}
+
+function initializeAllTeamModules(teamName) {
+  initCollaborativeNotes(teamName);
+  initTeamChallenges(teamName);
+  initTeamProgress(teamName);
+}
+
+function resetAllTeamModules() {
+  document.getElementById("collab-auth").style.display = "block";
+  document.getElementById("collab-editor").style.display = "none";
+  document.getElementById("challenges-auth").style.display = "block";
+  document.getElementById("challenges-manager").style.display = "none";
+  resetTeamProgress();
+}
+
+// Collaborative notes
+function initCollaborativeNotes(teamName) {
   document.getElementById("collab-auth").style.display = "none";
   document.getElementById("collab-editor").style.display = "block";
   document.getElementById("team-title").textContent = `Team: ${teamName}`;
   
-  const teamRef = doc(db, "teams", teamName);
-  collabUnsubscribe = onSnapshot(teamRef, docSnapshot => {
+  const unsubscribe = onSnapshot(doc(db, "teams", teamName), docSnapshot => {
     if (docSnapshot.exists()) {
-      const textarea = document.getElementById("collab-textarea");
-      const cursorPos = textarea.selectionStart;
-      textarea.value = docSnapshot.data().content || "";
-      textarea.setSelectionRange(cursorPos, cursorPos);
+      document.getElementById("collab-textarea").value = docSnapshot.data().content || "";
     }
   });
+  teamUnsubscribes.push(unsubscribe);
   
-  document.getElementById("collab-textarea").addEventListener("input", debounce(updateTeamContent, 500));
-  loadSnapshots();
-}
-
-async function loadSnapshots() {
-  const snapshotsRef = collection(db, "snapshots");
-  const q = query(snapshotsRef, where("teamName", "==", currentTeam));
-  const snapshot = await getDocs(q);
+  loadSnapshots(teamName);
   
-  const select = document.getElementById("snapshot-select");
-  select.innerHTML = '<option value="">Select snapshot to load...</option>';
-  
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    const option = document.createElement("option");
-    option.value = doc.id;
-    option.textContent = `${data.name} (${data.createdAt?.toDate().toLocaleString() || 'Unknown date'})`;
-    select.appendChild(option);
+  const textarea = document.getElementById("collab-textarea");
+  let timeout;
+  textarea.addEventListener("input", () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      if (currentTeam === teamName) {
+        await updateDoc(doc(db, "teams", teamName), { content: textarea.value });
+      }
+    }, 500);
   });
 }
 
+// Team challenges
+function initTeamChallenges(teamName) {
+  document.getElementById("challenges-auth").style.display = "none";
+  document.getElementById("challenges-manager").style.display = "block";
+  document.getElementById("challenges-team-title").textContent = `Team: ${teamName}`;
+  
+  const unsubscribe = onSnapshot(doc(db, "team_challenges", teamName), async docSnapshot => {
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
+      updateMembersList(data.members || []);
+      updateChallengesList(data.challenges || []);
+    } else {
+      // Create the document if it doesn't exist
+      await setDoc(doc(db, "team_challenges", teamName), {
+        challenges: [],
+        members: [auth.currentUser.email],
+        createdAt: serverTimestamp()
+      });
+    }
+  });
+  teamUnsubscribes.push(unsubscribe);
+}
+
+// Snapshot functionality
+window.saveSnapshot = async function() {
+  if (!currentTeam) return;
+  
+  const name = document.getElementById("snapshot-name").value.trim();
+  const content = document.getElementById("collab-textarea").value;
+  
+  if (!name) {
+    alert("Please enter a snapshot name");
+    return;
+  }
+  
+  if (!/^[a-zA-Z0-9_\s-]+$/.test(name)) {
+    alert("Snapshot name can only contain letters, numbers, spaces, hyphens, and underscores");
+    return;
+  }
+  
+  try {
+    await addDoc(collection(db, "snapshots"), {
+      teamName: currentTeam,
+      name: name,
+      content: content,
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser.email
+    });
+    document.getElementById("snapshot-name").value = "";
+    loadSnapshots(currentTeam);
+  } catch (error) {
+    console.error("Error saving snapshot:", error);
+    alert("Error saving snapshot");
+  }
+};
+
 window.loadSnapshot = async function() {
-  const snapshotId = document.getElementById("snapshot-select").value;
+  if (!currentTeam) return;
+  
+  const select = document.getElementById("snapshot-select");
+  const snapshotId = select.value;
+  
   if (!snapshotId) {
     alert("Please select a snapshot to load");
     return;
@@ -306,90 +440,384 @@ window.loadSnapshot = async function() {
   
   try {
     const snapshotDoc = await getDoc(doc(db, "snapshots", snapshotId));
-    if (snapshotDoc.exists()) {
-      const content = snapshotDoc.data().content;
-      document.getElementById("collab-textarea").value = content;
-      await updateDoc(doc(db, "teams", currentTeam), { content: content });
-      alert("Snapshot loaded successfully!");
+    if (snapshotDoc.exists() && snapshotDoc.data().teamName === currentTeam) {
+      document.getElementById("collab-textarea").value = snapshotDoc.data().content;
+      await updateDoc(doc(db, "teams", currentTeam), { content: snapshotDoc.data().content });
     }
   } catch (error) {
+    console.error("Error loading snapshot:", error);
     alert("Error loading snapshot");
   }
 };
 
-function updateTeamContent() {
-  if (currentTeam) {
-    const content = document.getElementById("collab-textarea").value;
-    updateDoc(doc(db, "teams", currentTeam), { content: content });
-  }
+function loadSnapshots(teamName) {
+  const q = query(collection(db, "snapshots"), where("teamName", "==", teamName));
+  const unsubscribe = onSnapshot(q, snapshot => {
+    const select = document.getElementById("snapshot-select");
+    select.innerHTML = '<option value="">Select snapshot to load...</option>';
+    
+    snapshot.forEach(docSnapshot => {
+      const data = docSnapshot.data();
+      const option = document.createElement("option");
+      option.value = docSnapshot.id;
+      option.textContent = `${data.name} (${data.createdBy})`;
+      select.appendChild(option);
+    });
+  });
+  teamUnsubscribes.push(unsubscribe);
 }
 
-window.saveSnapshot = async function() {
-  const snapshotName = document.getElementById("snapshot-name").value.trim();
-  const content = document.getElementById("collab-textarea").value;
+// Challenge management
+window.addChallenge = async function() {
+  if (!currentTeam) return;
   
-  if (!snapshotName) {
-    alert("Please enter a snapshot name");
+  const challengeName = document.getElementById("challenge-name").value.trim();
+  const assignTo = document.getElementById("assign-to").value;
+  
+  if (!challengeName) {
+    alert("Please enter a challenge name");
+    return;
+  }
+  
+  if (!/^[a-zA-Z0-9_\s-]+$/.test(challengeName)) {
+    alert("Challenge name can only contain letters, numbers, spaces, hyphens, and underscores");
     return;
   }
   
   try {
-    await addDoc(collection(db, "snapshots"), {
-      teamName: currentTeam,
-      name: snapshotName,
-      content: content,
-      createdAt: serverTimestamp()
-    });
-    document.getElementById("snapshot-name").value = "";
-    loadSnapshots();
-    alert("Snapshot saved successfully!");
+    const teamChallengesRef = doc(db, "team_challenges", currentTeam);
+    const teamDoc = await getDoc(teamChallengesRef);
+    
+    if (teamDoc.exists()) {
+      const challenges = teamDoc.data().challenges || [];
+      challenges.push({
+        id: Date.now().toString(),
+        name: challengeName,
+        assignedTo: assignTo || "Unassigned",
+        status: "Open",
+        createdAt: new Date().toISOString(),
+        createdBy: auth.currentUser.email
+      });
+      
+      await updateDoc(teamChallengesRef, { challenges });
+      document.getElementById("challenge-name").value = "";
+      document.getElementById("assign-to").value = "";
+    }
   } catch (error) {
-    alert("Error saving snapshot");
+    console.error("Error adding challenge:", error);
+    alert("Error adding challenge");
   }
 };
 
-window.leaveTeam = function() {
-  if (collabUnsubscribe) collabUnsubscribe();
-  currentTeam = null;
-  document.getElementById("collab-auth").style.display = "block";
-  document.getElementById("collab-editor").style.display = "none";
-  document.getElementById("team-name").value = "";
-  document.getElementById("team-password").value = "";
-  document.getElementById("collab-textarea").value = "";
-  document.getElementById("snapshot-name").value = "";
-  document.getElementById("snapshot-select").innerHTML = '<option value="">Select snapshot to load...</option>';
-};
-
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+function updateMembersList(members) {
+  const select = document.getElementById("assign-to");
+  select.innerHTML = '<option value="">Assign to...</option>';
+  
+  members.forEach(member => {
+    const option = document.createElement("option");
+    option.value = member;
+    option.textContent = member;
+    select.appendChild(option);
+  });
+  
+  if (!members.includes(auth.currentUser.email)) {
+    addMemberToTeam(currentTeam, auth.currentUser.email);
+  }
 }
 
-// Theme toggle
-document.getElementById("theme-toggle").addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-  const isDark = document.body.classList.contains("dark");
-  document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
-  localStorage.setItem("theme", isDark ? "dark" : "light");
-});
+function updateChallengesList(challenges) {
+  const list = document.getElementById("challenges-list");
+  list.innerHTML = "";
+  
+  challenges.forEach(challenge => {
+    const div = document.createElement("div");
+    div.className = "challenge-item";
+    div.innerHTML = `
+      <strong>${challenge.name}</strong><br>
+      <small>Assigned to: ${challenge.assignedTo} | Status: ${challenge.status}</small><br>
+      <small>Created by: ${challenge.createdBy}</small>
+      <button onclick="toggleChallengeStatus('${challenge.id}')" style="margin-top: 5px; padding: 4px 8px; font-size: 12px;">
+        Mark as ${challenge.status === 'Open' ? 'Completed' : 'Open'}
+      </button>
+      <button onclick="deleteChallenge('${challenge.id}')" style="margin-top: 5px; margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #ff4757;">
+        Delete
+      </button>
+    `;
+    list.appendChild(div);
+  });
+}
 
-// Load saved theme
-if (localStorage.getItem("theme") === "dark") {
-  document.body.classList.add("dark");
-  document.getElementById("theme-toggle").textContent = "☀️";
+window.toggleChallengeStatus = async function(challengeId) {
+  if (!currentTeam) return;
+  
+  try {
+    const teamChallengesRef = doc(db, "team_challenges", currentTeam);
+    const teamDoc = await getDoc(teamChallengesRef);
+    
+    if (teamDoc.exists()) {
+      const challenges = teamDoc.data().challenges || [];
+      const challenge = challenges.find(c => c.id === challengeId);
+      
+      if (challenge) {
+        challenge.status = challenge.status === 'Open' ? 'Completed' : 'Open';
+        await updateDoc(teamChallengesRef, { challenges });
+      }
+    }
+  } catch (error) {
+    console.error("Error updating challenge:", error);
+    alert("Error updating challenge");
+  }
+};
+
+window.deleteChallenge = async function(challengeId) {
+  if (!currentTeam) return;
+  
+  if (!confirm("Delete this challenge?")) return;
+  
+  try {
+    const teamChallengesRef = doc(db, "team_challenges", currentTeam);
+    const teamDoc = await getDoc(teamChallengesRef);
+    
+    if (teamDoc.exists()) {
+      const challenges = teamDoc.data().challenges || [];
+      const filteredChallenges = challenges.filter(c => c.id !== challengeId);
+      await updateDoc(teamChallengesRef, { challenges: filteredChallenges });
+    }
+  } catch (error) {
+    console.error("Error deleting challenge:", error);
+    alert("Error deleting challenge");
+  }
+};
+
+async function addMemberToTeam(teamName, email) {
+  try {
+    const teamChallengesRef = doc(db, "team_challenges", teamName);
+    const teamDoc = await getDoc(teamChallengesRef);
+    
+    if (teamDoc.exists()) {
+      const members = teamDoc.data().members || [];
+      if (!members.includes(email)) {
+        members.push(email);
+        await updateDoc(teamChallengesRef, { members });
+      }
+    } else {
+      // Create document if it doesn't exist
+      await setDoc(teamChallengesRef, {
+        challenges: [],
+        members: [email],
+        createdAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error("Error adding member:", error);
+  }
+}
+
+// Ticket system functionality
+function loadUserTickets(email) {
+  const ticketsRef = collection(db, "tickets");
+  
+  onSnapshot(ticketsRef, snapshot => {
+    const ticketsList = document.getElementById("tickets-list");
+    ticketsList.innerHTML = "";
+    
+    snapshot.forEach(docSnapshot => {
+      const ticket = docSnapshot.data();
+      const ticketId = docSnapshot.id;
+      
+      // Show tickets created by user or assigned to user
+      if (ticket.createdByEmail === email || ticket.assignedTo === email) {
+        const type = ticket.createdByEmail === email ? 'created' : 'assigned';
+        
+        const div = document.createElement("div");
+        div.className = "ticket-item";
+        div.innerHTML = `
+          <div class="ticket-header">
+            <div>
+              <strong>${ticket.subject}</strong>
+              <small style="display: block; color: #666;">${type === 'created' ? `To: ${ticket.assignedTo}` : `From: ${ticket.createdByEmail}`}</small>
+            </div>
+            <span class="ticket-status ${ticket.status === 'open' ? 'status-open' : 'status-resolved'}">${ticket.status.toUpperCase()}</span>
+          </div>
+          <p style="margin: 10px 0; color: #666;">${ticket.description}</p>
+          <div class="ticket-messages" id="messages-${ticketId}"></div>
+          ${ticket.status === 'open' ? `
+            <div class="ticket-reply">
+              <input id="comment-${ticketId}" placeholder="Add a comment..." style="flex: 1; margin-right: 10px;" />
+              <button onclick="addComment('${ticketId}')" style="padding: 8px 12px;">Comment</button>
+              <button onclick="resolveTicket('${ticketId}')" style="background: #38a169; padding: 8px 12px;">Resolve</button>
+            </div>
+          ` : `
+            <button onclick="deleteTicket('${ticketId}')" style="background: #e53e3e; margin-top: 10px;">Delete</button>
+          `}
+        `;
+        ticketsList.appendChild(div);
+        
+        // Load comments for this ticket
+        loadTicketComments(ticketId);
+      }
+    });
+  });
+}
+
+function loadTicketComments(ticketId) {
+  const ticketRef = doc(db, "tickets", ticketId);
+  onSnapshot(ticketRef, docSnapshot => {
+    if (docSnapshot.exists()) {
+      const ticket = docSnapshot.data();
+      const messagesContainer = document.getElementById(`messages-${ticketId}`);
+      if (messagesContainer && ticket.comments) {
+        messagesContainer.innerHTML = "";
+        ticket.comments.forEach(comment => {
+          const commentDiv = document.createElement("div");
+          commentDiv.className = "message";
+          commentDiv.innerHTML = `
+            <div class="message-author">${comment.author}</div>
+            <div>${comment.text}</div>
+            <small style="color: #666;">${comment.timestamp?.toDate ? comment.timestamp.toDate().toLocaleString() : 'Just now'}</small>
+          `;
+          messagesContainer.appendChild(commentDiv);
+        });
+      }
+    }
+  });
+}
+
+window.addComment = async function(ticketId) {
+  const commentInput = document.getElementById(`comment-${ticketId}`);
+  const commentText = commentInput.value.trim();
+  const user = auth.currentUser;
+  
+  if (!commentText || !user) return;
+  
+  try {
+    const ticketRef = doc(db, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      const comments = ticket.comments || [];
+      
+      comments.push({
+        author: user.email,
+        text: commentText,
+        timestamp: new Date()
+      });
+      
+      await updateDoc(ticketRef, { comments });
+      commentInput.value = "";
+    }
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    alert("Error adding comment");
+  }
+};
+
+window.createTicket = async function() {
+  const email = document.getElementById("ticket-email").value.trim();
+  const subject = document.getElementById("ticket-subject").value.trim();
+  const description = document.getElementById("ticket-description").value.trim();
+  const user = auth.currentUser;
+  
+  if (!email || !subject || !description || !user) {
+    alert("Please fill all fields and ensure you are logged in");
+    return;
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
+  
+  try {
+    await addDoc(collection(db, "tickets"), {
+      createdBy: user.uid,
+      createdByEmail: user.email,
+      assignedTo: email,
+      subject: subject,
+      description: description,
+      status: "open",
+      createdAt: serverTimestamp(),
+      comments: []
+    });
+    
+    document.getElementById("ticket-email").value = "";
+    document.getElementById("ticket-subject").value = "";
+    document.getElementById("ticket-description").value = "";
+    
+    alert("Ticket created successfully!");
+  } catch (error) {
+    console.error("Error creating ticket:", error);
+    alert("Error creating ticket");
+  }
+};
+
+window.resolveTicket = async function(ticketId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  try {
+    await updateDoc(doc(db, "tickets", ticketId), {
+      status: "resolved",
+      resolvedAt: serverTimestamp(),
+      resolvedBy: user.email
+    });
+  } catch (error) {
+    console.error("Error resolving ticket:", error);
+    alert("Error resolving ticket");
+  }
+};
+
+window.deleteTicket = async function(ticketId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  if (!confirm("Are you sure you want to delete this ticket?")) return;
+  
+  try {
+    await deleteDoc(doc(db, "tickets", ticketId));
+  } catch (error) {
+    console.error("Error deleting ticket:", error);
+    alert("Error deleting ticket");
+  }
+};
+
+async function saveUserTeamState(uid, teamName) {
+  try {
+    await setDoc(doc(db, "userTeamStates", uid), {
+      currentTeam: teamName,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Error saving team state:", error);
+  }
+}
+
+async function loadUserTeamState(uid) {
+  try {
+    const stateDoc = await getDoc(doc(db, "userTeamStates", uid));
+    if (stateDoc.exists() && stateDoc.data().currentTeam) {
+      const teamName = stateDoc.data().currentTeam;
+      
+      // Verify team still exists and user has access
+      const teamDoc = await getDoc(doc(db, "teams", teamName));
+      if (teamDoc.exists()) {
+        currentTeam = teamName;
+        updateTeamUI(true);
+        initializeAllTeamModules(teamName);
+      } else {
+        // Team no longer exists, clear state
+        await saveUserTeamState(uid, null);
+      }
+    }
+  } catch (error) {
+    console.error("Error loading team state:", error);
+  }
 }
 
 // Layout management
 let draggedElement = null;
-let layouts = {};
-
 const GRID_SIZE = 20;
 
 function snapToGrid(value) {
@@ -421,17 +849,30 @@ function initializeLayout() {
     } else if (moduleId === 'vigenere') {
       width = '400px';
       height = '380px';
+    } else if (moduleId === 'challenges') {
+      width = '450px';
+      height = '400px';
     }
     
-    section.style.left = `${snapToGrid((index % 2) * 420 + 20)}px`;
-    section.style.top = `${snapToGrid(Math.floor(index / 2) * 320 + 20)}px`;
+    // Only set position if not already set
+    if (!section.style.left || !section.style.top) {
+      section.style.left = `${snapToGrid((index % 2) * 420 + 20)}px`;
+      section.style.top = `${snapToGrid(Math.floor(index / 2) * 320 + 20)}px`;
+    }
+    
+    // Always set size
     section.style.width = width;
     section.style.height = height;
     
+    // Remove existing listeners to prevent duplicates
+    section.removeEventListener('mousedown', startDrag);
     section.addEventListener('mousedown', startDrag);
     
     const resizeHandle = section.querySelector('.resize-handle');
-    resizeHandle.addEventListener('mousedown', startResize);
+    if (resizeHandle) {
+      resizeHandle.removeEventListener('mousedown', startResize);
+      resizeHandle.addEventListener('mousedown', startResize);
+    }
   });
 }
 
@@ -455,7 +896,6 @@ function startDrag(e) {
   
   function stopDrag() {
     if (draggedElement) {
-      // Snap to grid on drop
       const currentLeft = parseInt(draggedElement.style.left);
       const currentTop = parseInt(draggedElement.style.top);
       draggedElement.style.left = `${snapToGrid(currentLeft)}px`;
@@ -484,8 +924,8 @@ function startResize(e) {
     const newWidth = snapToGrid(startWidth + (e.clientX - startX));
     const newHeight = snapToGrid(startHeight + (e.clientY - startY));
     
-    const minWidth = parseInt(getComputedStyle(section).minWidth);
-    const minHeight = parseInt(getComputedStyle(section).minHeight);
+    const minWidth = parseInt(getComputedStyle(section).minWidth) || 300;
+    const minHeight = parseInt(getComputedStyle(section).minHeight) || 200;
     
     section.style.width = `${Math.max(minWidth, newWidth)}px`;
     section.style.height = `${Math.max(minHeight, newHeight)}px`;
@@ -521,7 +961,7 @@ async function saveLayout() {
   try {
     await setDoc(doc(db, "layouts", user.uid), { 
       layout,
-      minimizedModules: minimizedModules
+      minimizedModules
     });
   } catch (error) {
     console.error("Error saving layout:", error);
@@ -530,7 +970,10 @@ async function saveLayout() {
 
 async function loadLayout() {
   const user = auth.currentUser;
-  if (!user) return;
+  if (!user) {
+    initializeLayout();
+    return;
+  }
   
   try {
     const layoutDoc = await getDoc(doc(db, "layouts", user.uid));
@@ -550,274 +993,62 @@ async function loadLayout() {
       });
       
       // Restore minimized states
+      minimizedModules = savedMinimized;
       savedMinimized.forEach(moduleId => {
         const sectionId = `${moduleId}-section`;
-        minimizeModule(sectionId);
+        const module = document.getElementById(sectionId);
+        if (module) {
+          const moduleTitle = module.querySelector('h2').textContent.replace(' −', '');
+          module.style.display = 'none';
+          
+          const panel = document.createElement('div');
+          panel.className = 'minimized-panel';
+          panel.id = `minimized-${sectionId}`;
+          panel.innerHTML = `
+            <span>${moduleTitle}</span>
+            <button onclick="restoreModule('${sectionId}')" style="background: #ff8f40; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer;">+</button>
+          `;
+          
+          const existingPanels = document.querySelectorAll('.minimized-panel').length;
+          panel.style.top = `${100 + (existingPanels * 50)}px`;
+          document.body.appendChild(panel);
+        }
       });
+      
+      // Ensure event listeners are attached even with saved layout
+      attachDragListeners();
+    } else {
+      initializeLayout();
     }
   } catch (error) {
     console.error("Error loading layout:", error);
+    initializeLayout();
   }
 }
 
-// Ticket system functionality
-function sanitizeInput(input) {
-  const div = document.createElement('div');
-  div.textContent = input;
-  return div.innerHTML;
-}
-
-window.createTicket = async function() {
-  const email = document.getElementById('ticket-email').value.trim();
-  const subject = document.getElementById('ticket-subject').value.trim();
-  const description = document.getElementById('ticket-description').value.trim();
-  const user = auth.currentUser;
-  
-  if (!email || !subject || !description || !user) {
-    alert('Please fill all fields and ensure you are logged in');
-    return;
-  }
-  
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    alert('Please enter a valid email address');
-    return;
-  }
-  
-  try {
-    await addDoc(collection(db, 'tickets'), {
-      createdBy: user.uid,
-      createdByEmail: user.email,
-      assignedTo: sanitizeInput(email),
-      subject: sanitizeInput(subject),
-      description: sanitizeInput(description),
-      status: 'open',
-      createdAt: serverTimestamp(),
-      messages: []
-    });
+function attachDragListeners() {
+  const sections = document.querySelectorAll('section');
+  sections.forEach(section => {
+    section.removeEventListener('mousedown', startDrag);
+    section.addEventListener('mousedown', startDrag);
     
-    document.getElementById('ticket-email').value = '';
-    document.getElementById('ticket-subject').value = '';
-    document.getElementById('ticket-description').value = '';
-    
-    alert('Ticket created successfully!');
-  } catch (error) {
-    console.error('Error creating ticket:', error);
-    alert('Error creating ticket');
-  }
-};
-
-function loadUserTickets(userEmail) {
-  const ticketsRef = collection(db, 'tickets');
-  
-  // Load all tickets and filter client-side
-  onSnapshot(ticketsRef, snapshot => {
-    const ticketsList = document.getElementById('tickets-list');
-    ticketsList.innerHTML = '';
-    
-    snapshot.forEach(docSnapshot => {
-      const ticket = docSnapshot.data();
-      const ticketId = docSnapshot.id;
-      
-      // Show tickets created by user or assigned to user
-      if (ticket.createdByEmail === userEmail || ticket.assignedTo === userEmail) {
-        const type = ticket.createdByEmail === userEmail ? 'created' : 'assigned';
-        const ticketElement = createTicketElement(ticket, ticketId, type);
-        ticketsList.appendChild(ticketElement);
-      }
-    });
-  });
-}
-
-
-
-function createTicketElement(ticket, ticketId, type) {
-  const div = document.createElement('div');
-  div.className = 'ticket-item';
-  div.id = `ticket-${ticketId}`;
-  
-  const statusClass = ticket.status === 'open' ? 'status-open' : 'status-resolved';
-  const typeLabel = type === 'created' ? 'Created by you' : 'Assigned to you';
-  
-  div.innerHTML = `
-    <div class="ticket-header">
-      <div>
-        <strong>${ticket.subject}</strong>
-        <small style="display: block; color: #666;">${typeLabel}</small>
-      </div>
-      <span class="ticket-status ${statusClass}">${ticket.status.toUpperCase()}</span>
-    </div>
-    <p style="margin: 10px 0; color: #666;">${ticket.description}</p>
-    <div class="ticket-messages" id="messages-${ticketId}"></div>
-    ${ticket.status === 'open' ? `
-      <div class="ticket-reply">
-        <input id="reply-${ticketId}" placeholder="Type your reply..." />
-        <button onclick="replyToTicket('${ticketId}')">Reply</button>
-        <button onclick="resolveTicket('${ticketId}')">Resolve</button>
-      </div>
-    ` : `
-      <div class="ticket-reply">
-        <button onclick="deleteTicket('${ticketId}')" style="background: #e53e3e;">Delete</button>
-      </div>
-    `}
-  `;
-  
-  // Load messages
-  loadTicketMessages(ticketId);
-  
-  return div;
-}
-
-function updateTicketElement(element, ticket, ticketId, type) {
-  const statusSpan = element.querySelector('.ticket-status');
-  statusSpan.textContent = ticket.status.toUpperCase();
-  statusSpan.className = `ticket-status ${ticket.status === 'open' ? 'status-open' : 'status-resolved'}`;
-  
-  // Remove reply section if resolved
-  if (ticket.status === 'resolved') {
-    const replySection = element.querySelector('.ticket-reply');
-    if (replySection) replySection.remove();
-  }
-}
-
-function loadTicketMessages(ticketId) {
-  const ticketRef = doc(db, 'tickets', ticketId);
-  onSnapshot(ticketRef, docSnapshot => {
-    if (docSnapshot.exists()) {
-      const ticket = docSnapshot.data();
-      const messagesContainer = document.getElementById(`messages-${ticketId}`);
-      if (messagesContainer && ticket.messages) {
-        messagesContainer.innerHTML = '';
-        ticket.messages.forEach(message => {
-          const messageDiv = document.createElement('div');
-          messageDiv.className = 'message';
-          messageDiv.innerHTML = `
-            <div class="message-author">${message.author}</div>
-            <div>${message.text}</div>
-            <small style="color: #666;">${message.timestamp?.toDate ? message.timestamp.toDate().toLocaleString() : message.timestamp?.toLocaleString() || 'Just now'}</small>
-          `;
-          messagesContainer.appendChild(messageDiv);
-        });
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
+    const resizeHandle = section.querySelector('.resize-handle');
+    if (resizeHandle) {
+      resizeHandle.removeEventListener('mousedown', startResize);
+      resizeHandle.addEventListener('mousedown', startResize);
     }
   });
 }
-
-window.replyToTicket = async function(ticketId) {
-  const replyInput = document.getElementById(`reply-${ticketId}`);
-  const message = replyInput.value.trim();
-  const user = auth.currentUser;
-  
-  if (!message || !user) return;
-  
-  try {
-    const ticketRef = doc(db, 'tickets', ticketId);
-    const ticketDoc = await getDoc(ticketRef);
-    
-    if (ticketDoc.exists()) {
-      const ticket = ticketDoc.data();
-      
-      // IDOR protection: only allow creator or assignee to reply
-      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
-        alert('You are not authorized to reply to this ticket');
-        return;
-      }
-      
-      const newMessage = {
-        author: user.email,
-        text: sanitizeInput(message),
-        timestamp: new Date()
-      };
-      
-      const updatedMessages = [...(ticket.messages || []), newMessage];
-      
-      await updateDoc(ticketRef, {
-        messages: updatedMessages
-      });
-      
-      replyInput.value = '';
-    }
-  } catch (error) {
-    console.error('Error replying to ticket:', error);
-    alert('Error sending reply');
-  }
-};
-
-window.resolveTicket = async function(ticketId) {
-  const user = auth.currentUser;
-  if (!user) return;
-  
-  try {
-    const ticketRef = doc(db, 'tickets', ticketId);
-    const ticketDoc = await getDoc(ticketRef);
-    
-    if (ticketDoc.exists()) {
-      const ticket = ticketDoc.data();
-      
-      // IDOR protection: only allow creator or assignee to resolve
-      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
-        alert('You are not authorized to resolve this ticket');
-        return;
-      }
-      
-      await updateDoc(ticketRef, {
-        status: 'resolved',
-        resolvedAt: serverTimestamp(),
-        resolvedBy: user.email
-      });
-    }
-  } catch (error) {
-    console.error('Error resolving ticket:', error);
-    alert('Error resolving ticket');
-  }
-};
-
-window.deleteTicket = async function(ticketId) {
-  const user = auth.currentUser;
-  if (!user) return;
-  
-  if (!confirm('Are you sure you want to delete this ticket?')) return;
-  
-  try {
-    const ticketRef = doc(db, 'tickets', ticketId);
-    const ticketDoc = await getDoc(ticketRef);
-    
-    if (ticketDoc.exists()) {
-      const ticket = ticketDoc.data();
-      
-      // IDOR protection: only allow creator or assignee to delete
-      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
-        alert('You are not authorized to delete this ticket');
-        return;
-      }
-      
-      // Only allow deletion of resolved tickets
-      if (ticket.status !== 'resolved') {
-        alert('Only resolved tickets can be deleted');
-        return;
-      }
-      
-      await deleteDoc(ticketRef);
-    }
-  } catch (error) {
-    console.error('Error deleting ticket:', error);
-    alert('Error deleting ticket');
-  }
-};
 
 // Minimize functionality
 let minimizedModules = [];
 
-function minimizeModule(moduleId) {
+window.minimizeModule = function(moduleId) {
   const module = document.getElementById(moduleId);
   const moduleTitle = module.querySelector('h2').textContent.replace(' −', '');
   
-  // Hide the module
   module.style.display = 'none';
   
-  // Create minimized panel
   const panel = document.createElement('div');
   panel.className = 'minimized-panel';
   panel.id = `minimized-${moduleId}`;
@@ -826,7 +1057,6 @@ function minimizeModule(moduleId) {
     <button onclick="restoreModule('${moduleId}')" style="background: #ff8f40; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer;">+</button>
   `;
   
-  // Position panel
   const existingPanels = document.querySelectorAll('.minimized-panel').length;
   panel.style.top = `${100 + (existingPanels * 50)}px`;
   
@@ -834,19 +1064,15 @@ function minimizeModule(moduleId) {
   const moduleDataId = module.dataset.module;
   minimizedModules.push(moduleDataId);
   saveLayout();
-}
+};
 
-function restoreModule(moduleId) {
+window.restoreModule = function(moduleId) {
   const module = document.getElementById(moduleId);
   const panel = document.getElementById(`minimized-${moduleId}`);
   
-  // Show the module
   module.style.display = 'flex';
-  
-  // Remove minimized panel
   panel.remove();
   
-  // Update positions of remaining panels
   const remainingPanels = document.querySelectorAll('.minimized-panel');
   remainingPanels.forEach((panel, index) => {
     panel.style.top = `${100 + (index * 50)}px`;
@@ -855,32 +1081,9 @@ function restoreModule(moduleId) {
   const moduleDataId = module.dataset.module;
   minimizedModules = minimizedModules.filter(id => id !== moduleDataId);
   saveLayout();
-}
-
-// Make functions globally available
-window.minimizeModule = minimizeModule;
-window.restoreModule = restoreModule;
+};
 
 // Decoder functionality
-function base32Decode(input) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let bits = '';
-  let result = '';
-  
-  input = input.toUpperCase().replace(/[^A-Z2-7]/g, '');
-  
-  for (let i = 0; i < input.length; i++) {
-    const val = alphabet.indexOf(input[i]);
-    if (val >= 0) bits += val.toString(2).padStart(5, '0');
-  }
-  
-  for (let i = 0; i + 8 <= bits.length; i += 8) {
-    result += String.fromCharCode(parseInt(bits.substr(i, 8), 2));
-  }
-  
-  return result;
-}
-
 window.decodeText = function() {
   const input = document.getElementById('decoder-input').value;
   const type = document.getElementById('decoder-type').value;
@@ -899,7 +1102,16 @@ window.decodeText = function() {
         result = atob(input.replace(/[^A-Za-z0-9+/=]/g, ''));
         break;
       case 'base32':
-        result = base32Decode(input);
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        let bits = '';
+        const cleanInput = input.toUpperCase().replace(/[^A-Z2-7]/g, '');
+        for (let i = 0; i < cleanInput.length; i++) {
+          const val = alphabet.indexOf(cleanInput[i]);
+          if (val >= 0) bits += val.toString(2).padStart(5, '0');
+        }
+        for (let i = 0; i + 8 <= bits.length; i += 8) {
+          result += String.fromCharCode(parseInt(bits.substr(i, 8), 2));
+        }
         break;
       case 'rot13':
         result = input.replace(/[A-Za-z]/g, (char) => {
@@ -918,51 +1130,7 @@ window.decodeText = function() {
   }
 };
 
-// Initialize
-loadUpcomingCTFs();
-initializeLayout();
-
 // Vigenere cipher functionality
-function vigenereDecrypt(text, key) {
-  let result = '';
-  let keyIndex = 0;
-  
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char.match(/[A-Za-z]/)) {
-      const isUpper = char === char.toUpperCase();
-      const charCode = char.toUpperCase().charCodeAt(0) - 65;
-      const keyChar = key[keyIndex % key.length].toUpperCase().charCodeAt(0) - 65;
-      const decrypted = (charCode - keyChar + 26) % 26;
-      result += String.fromCharCode(decrypted + 65);
-      if (!isUpper) result = result.slice(0, -1) + result.slice(-1).toLowerCase();
-      keyIndex++;
-    } else {
-      result += char;
-    }
-  }
-  return result;
-}
-
-function calculateIC(text) {
-  const freq = {};
-  let letters = 0;
-  
-  for (const char of text.toUpperCase()) {
-    if (char.match(/[A-Z]/)) {
-      freq[char] = (freq[char] || 0) + 1;
-      letters++;
-    }
-  }
-  
-  let ic = 0;
-  for (const count of Object.values(freq)) {
-    ic += count * (count - 1);
-  }
-  
-  return letters > 1 ? ic / (letters * (letters - 1)) : 0;
-}
-
 window.solveVigenere = function() {
   const input = document.getElementById('vigenere-input').value;
   const key = document.getElementById('vigenere-key').value.trim();
@@ -973,31 +1141,40 @@ window.solveVigenere = function() {
     return;
   }
   
+  function vigenereDecrypt(text, key) {
+    let result = '';
+    let keyIndex = 0;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char.match(/[A-Za-z]/)) {
+        const isUpper = char === char.toUpperCase();
+        const charCode = char.toUpperCase().charCodeAt(0) - 65;
+        const keyChar = key[keyIndex % key.length].toUpperCase().charCodeAt(0) - 65;
+        const decrypted = (charCode - keyChar + 26) % 26;
+        result += String.fromCharCode(decrypted + 65);
+        if (!isUpper) result = result.slice(0, -1) + result.slice(-1).toLowerCase();
+        keyIndex++;
+      } else {
+        result += char;
+      }
+    }
+    return result;
+  }
+  
   if (key) {
-    // Decrypt with provided key
     output.value = vigenereDecrypt(input, key);
   } else {
-    // Brute force key lengths 1-10
+    const commonKeys = ['KEY', 'SECRET', 'PASSWORD', 'CIPHER', 'CODE', 'FLAG', 'CTF'];
     let bestResult = '';
-    let bestIC = 0;
     let bestKey = '';
     
-    for (let keyLen = 1; keyLen <= 10; keyLen++) {
-      // Try common keys for this length
-      const commonKeys = ['KEY', 'SECRET', 'PASSWORD', 'CIPHER', 'CODE', 'FLAG', 'CTF'];
-      
-      for (const testKey of commonKeys) {
-        if (testKey.length >= keyLen) {
-          const truncatedKey = testKey.substring(0, keyLen);
-          const decrypted = vigenereDecrypt(input, truncatedKey);
-          const ic = calculateIC(decrypted);
-          
-          if (ic > bestIC) {
-            bestIC = ic;
-            bestResult = decrypted;
-            bestKey = truncatedKey;
-          }
-        }
+    for (const testKey of commonKeys) {
+      const decrypted = vigenereDecrypt(input, testKey);
+      if (decrypted.includes('FLAG') || decrypted.includes('CTF')) {
+        bestResult = decrypted;
+        bestKey = testKey;
+        break;
       }
     }
     
@@ -1005,36 +1182,32 @@ window.solveVigenere = function() {
   }
 };
 
-// Auto-minimize decoder and vigenere on launch
-setTimeout(() => {
-  minimizeModule('decoder-section');
-  minimizeModule('vigenere-section');
-}, 100);
-
-// Hide drag hint after 5 seconds
-setTimeout(() => {
-  const hint = document.getElementById("drag-hint");
-  if (hint) {
-    hint.style.opacity = "0";
-    hint.style.transition = "opacity 0.5s ease";
-    setTimeout(() => hint.remove(), 500);
-  }
-}, 5000);
-
-// Hide user display and popup note after 20 seconds
-setTimeout(() => {
-  const userDisplay = document.getElementById("user-display");
-  const popupNote = document.querySelector('p[style*="opacity: 0.8"]');
+// Theme toggle functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const themeToggle = document.getElementById('theme-toggle');
   
-  if (userDisplay) {
-    userDisplay.style.opacity = "0";
-    userDisplay.style.transition = "opacity 0.5s ease";
-    setTimeout(() => userDisplay.remove(), 500);
+  // Load saved theme
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+    if (themeToggle) themeToggle.textContent = '☀️';
   }
   
-  if (popupNote) {
-    popupNote.style.opacity = "0";
-    popupNote.style.transition = "opacity 0.5s ease";
-    setTimeout(() => popupNote.remove(), 500);
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      themeToggle.textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
   }
-}, 20000);
+  
+  // Initialize layout for any sections that don't have positioning yet
+  setTimeout(() => {
+    const sections = document.querySelectorAll('section');
+    sections.forEach(section => {
+      if (!section.style.left || !section.style.top) {
+        initializeLayout();
+      }
+    });
+  }, 1000);
+});

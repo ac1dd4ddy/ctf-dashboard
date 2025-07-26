@@ -39,14 +39,14 @@ A comprehensive, customizable dashboard designed specifically for Capture The Fl
 - **Drag & Drop Interface**: Position modules anywhere on your screen
 - **Resizable Modules**: Adjust module sizes to fit your workflow
 - **Grid Alignment**: Automatic snapping ensures clean, organized layouts
-- **Layout Memory**: Your custom arrangement is saved and restored automatically
+- **Layout Memory**: Your custom arrangement is saved to Firestore and restored automatically
 - **Full-screen Workspace**: Utilize your entire screen real estate
 
 ### 🌙 Adaptive Theme System
 - **Dual Themes**: Switch between Ayu Light and Ayu Dark color schemes
 - **Eye Comfort**: Dark mode reduces strain during long competition sessions
 - **Consistent Design**: All modules adapt seamlessly to theme changes
-- **Personal Preference**: Theme choice is remembered across sessions
+- **Cross-device Sync**: Theme and layout preferences sync across all your devices
 
 ## How It Works
 
@@ -55,7 +55,7 @@ The dashboard uses modern web technologies to provide a seamless experience:
 - **Real-time Database**: Firebase Firestore ensures instant synchronization across all team members
 - **Google Authentication**: Secure, hassle-free login using existing Google accounts
 - **API Integration**: Direct connection to CTFTime for up-to-date competition information
-- **Client-side Storage**: Layout preferences and themes are stored locally for instant loading
+- **Cloud Storage**: Layout preferences and themes are stored in Firestore and sync across devices
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
 
 ## Perfect for CTF Teams

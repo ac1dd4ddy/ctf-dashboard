@@ -202,6 +202,50 @@ body.dark .message-author {
   color: #ffb454;
 }
 
+body.dark #team-login {
+  background: #14191f !important;
+  border: 1px solid #1f2430 !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+body.dark #team-status {
+  background: #14191f !important;
+  border: 1px solid #1f2430 !important;
+  color: #bfbdb6 !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+body.dark #team-login input {
+  background: #0d1117 !important;
+  border: 2px solid #1f2430 !important;
+  color: #bfbdb6 !important;
+}
+
+body.dark #global-team-name,
+body.dark #global-team-password {
+  background: #0d1117 !important;
+  border: 2px solid #1f2430 !important;
+  color: #bfbdb6 !important;
+}
+
+body.dark #team-login button {
+  background: #ffb454 !important;
+  color: #0d1117 !important;
+}
+
+body.dark #team-login button:hover {
+  background: #ff8f40 !important;
+}
+
+body.dark #team-status button {
+  background: #ff4757 !important;
+  color: white !important;
+}
+
+body.dark #team-status button:hover {
+  background: #d73a49 !important;
+}
+
 .ticket-reply {
   display: flex;
   gap: 10px;
@@ -216,6 +260,19 @@ body.dark .message-author {
 .ticket-reply button {
   padding: 8px 12px;
   font-size: 0.9rem;
+}
+
+.challenge-item {
+  border: 1px solid #e7e8e9;
+  border-radius: 5px;
+  margin: 10px 0;
+  padding: 15px;
+  background: #f9f9f9;
+}
+
+body.dark .challenge-item {
+  border-color: #1f2430;
+  background: #1a1f2e;
 }
 
 .minimize-btn {
