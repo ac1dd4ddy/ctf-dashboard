@@ -7,24 +7,50 @@
 </head>
 <body>
   <h1>PseudoSudo CTF Dashboard</h1>
+  <p id="user-display" style="font-size: 0.9rem; margin: 5px 0;"></p>
   <p style="font-size: 0.9rem; opacity: 0.8;">Note: Please enable popups for full functionality</p>
 
   <div class="grid-container">
-    <section>
+    <section id="ctf-section" data-module="ctf">
       <h2>Upcoming CTFs</h2>
       <ul id="ctf-list"></ul>
+      <div class="resize-handle"></div>
     </section>
 
-    <section>
+    <section id="progress-section" data-module="progress">
       <h2>Team Progress</h2>
       <ul id="progress-list"></ul>
+      <div class="resize-handle"></div>
     </section>
 
-    <section>
+    <section id="notes-section" data-module="notes">
       <h2>Notes</h2>
       <ul id="Notes-list"></ul>
       <input id="Notes-input" placeholder="Add a task" />
       <button onclick="addNotes()">Add</button>
+      <div class="resize-handle"></div>
+    </section>
+
+    <section id="collab-section" data-module="collab">
+      <h2>Collaborative Notes</h2>
+      <div id="collab-auth">
+        <input id="team-name" placeholder="Team name" style="width: 45%; margin-right: 5%;" />
+        <input id="team-password" type="password" placeholder="Password" style="width: 45%; margin-right: 5%;" />
+        <button onclick="joinTeam()">Join</button>
+        <button onclick="createTeam()">Create</button>
+      </div>
+      <div id="collab-editor" style="display: none;">
+        <h3 id="team-title"></h3>
+        <textarea id="collab-textarea" style="width: 100%; height: 200px; margin: 10px 0; padding: 10px; border: 2px solid #e7e8e9; border-radius: 5px; resize: vertical;"></textarea>
+        <input id="snapshot-name" placeholder="Snapshot name" style="width: 60%; margin-right: 5%; padding: 12px;" />
+        <button onclick="saveSnapshot()" style="padding: 12px 20px;">Save Snapshot</button><br><br>
+        <select id="snapshot-select" style="width: 60%; margin-right: 5%; padding: 12px;">
+          <option value="">Select snapshot to load...</option>
+        </select>
+        <button onclick="loadSnapshot()" style="padding: 12px 20px;">Load Snapshot</button>
+        <button onclick="leaveTeam()">Leave Team</button>
+      </div>
+      <div class="resize-handle"></div>
     </section>
   </div>
 

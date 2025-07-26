@@ -10,7 +10,7 @@ body {
   color: #5c6773;
   background: linear-gradient(135deg, #fafafa 0%, #fcfcfc 100%);
   min-height: 100vh;
-  padding: 20px;
+  padding: 80px 20px 20px 80px;
   transition: all 0.3s ease;
 }
 
@@ -58,14 +58,30 @@ body.dark a:hover {
   color: #73d0ff;
 }
 
+body.dark textarea {
+  background: #0d1117;
+  border-color: #1f2430;
+  color: #bfbdb6;
+}
+
+body.dark h3 {
+  color: #bfbdb6;
+}
+
 .grid-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, max-content));
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  justify-content: center;
-  align-items: start;
+  position: relative;
+  min-height: calc(200vh - 160px);
+  width: 100%;
+  background-image: 
+    linear-gradient(rgba(255, 143, 64, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 143, 64, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+body.dark .grid-container {
+  background-image: 
+    linear-gradient(rgba(255, 180, 84, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 180, 84, 0.1) 1px, transparent 1px);
 }
 
 h1 {
@@ -86,6 +102,66 @@ section {
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
+  position: absolute;
+  min-width: 400px;
+  min-height: 300px;
+  overflow: hidden;
+  cursor: move;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+#collab-section {
+  min-width: 500px;
+  min-height: 400px;
+}
+
+#ctf-section {
+  min-width: 450px;
+  min-height: 400px;
+}
+
+#ctf-section ul {
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(100% - 60px);
+}
+
+#ctf-section li {
+  align-items: flex-start;
+  flex-direction: column;
+  padding: 15px;
+  margin: 8px 0;
+}
+
+#ctf-section li div {
+  width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+section:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: se-resize;
+  background: linear-gradient(-45deg, transparent 0%, transparent 40%, #ff8f40 40%, #ff8f40 60%, transparent 60%);
+  opacity: 0.6;
+}
+
+body.dark .resize-handle {
+  background: linear-gradient(-45deg, transparent 0%, transparent 40%, #ffb454 40%, #ffb454 60%, transparent 60%);
+}
+
+.resize-handle:hover {
+  opacity: 1;
 }
 
 body.dark section {
@@ -237,16 +313,15 @@ body.dark p {
 
 @media (max-width: 768px) {
   body {
-    padding: 10px;
+    padding: 80px 10px 10px 10px;
   }
   
   h1 {
     font-size: 2rem;
   }
   
-  section {
-    margin: 15px auto;
-    padding: 20px;
+  .grid-container {
+    min-height: calc(200vh - 120px);
   }
   
   input {
