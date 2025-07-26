@@ -218,6 +218,60 @@ body.dark .message-author {
   font-size: 0.9rem;
 }
 
+.minimize-btn {
+  float: right;
+  padding: 4px 8px;
+  font-size: 1rem;
+  background: #ff8f40;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.minimize-btn:hover {
+  background: #f29718;
+}
+
+body.dark .minimize-btn {
+  background: #ffb454;
+}
+
+body.dark .minimize-btn:hover {
+  background: #ff8f40;
+}
+
+.minimized-panel {
+  position: fixed;
+  right: 10px;
+  width: 200px;
+  height: 40px;
+  background: #fcfcfc;
+  border: 1px solid #e7e8e9;
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body.dark .minimized-panel {
+  background: #14191f;
+  border-color: #1f2430;
+}
+
+.minimized-panel:hover {
+  background: #f0f0f0;
+}
+
+body.dark .minimized-panel:hover {
+  background: #1f2430;
+}
+
 section:hover {
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }

@@ -13,19 +13,19 @@
 
   <div class="grid-container">
     <section id="ctf-section" data-module="ctf">
-      <h2>Upcoming CTFs</h2>
+      <h2>Upcoming CTFs <button class="minimize-btn" onclick="minimizeModule('ctf-section')">−</button></h2>
       <ul id="ctf-list"></ul>
       <div class="resize-handle"></div>
     </section>
 
     <section id="progress-section" data-module="progress">
-      <h2>Team Progress</h2>
+      <h2>Team Progress <button class="minimize-btn" onclick="minimizeModule('progress-section')">−</button></h2>
       <ul id="progress-list"></ul>
       <div class="resize-handle"></div>
     </section>
 
     <section id="notes-section" data-module="notes">
-      <h2>Notes</h2>
+      <h2>Notes <button class="minimize-btn" onclick="minimizeModule('notes-section')">−</button></h2>
       <ul id="Notes-list"></ul>
       <input id="Notes-input" placeholder="Add a task" />
       <button onclick="addNotes()">Add</button>
@@ -33,7 +33,7 @@
     </section>
 
     <section id="collab-section" data-module="collab">
-      <h2>Collaborative Notes</h2>
+      <h2>Collaborative Notes <button class="minimize-btn" onclick="minimizeModule('collab-section')">−</button></h2>
       <div id="collab-auth">
         <input id="team-name" placeholder="Team name" style="width: 45%; margin-right: 5%;" />
         <input id="team-password" type="password" placeholder="Password" style="width: 45%; margin-right: 5%;" />
@@ -55,7 +55,7 @@
     </section>
 
     <section id="tickets-section" data-module="tickets">
-      <h2>Support Tickets</h2>
+      <h2>Support Tickets <button class="minimize-btn" onclick="minimizeModule('tickets-section')">−</button></h2>
       <div id="ticket-create">
         <input id="ticket-email" placeholder="User email" style="width: 45%; margin-right: 5%;" />
         <input id="ticket-subject" placeholder="Subject" style="width: 45%; margin-right: 5%;" />
@@ -67,7 +67,7 @@
     </section>
 
     <section id="knowledge-section" data-module="knowledge">
-      <h2>Knowledge Base</h2>
+      <h2>Knowledge Base <button class="minimize-btn" onclick="minimizeModule('knowledge-section')">−</button></h2>
       <ul>
         <li><a href="https://discord.gg/jWWA5VkHxW" target="_blank">Discord Server</a></li>
         <li><a href="https://www.notion.so/HACC-Capture-The-Flag-22fa08af412b80118068d0424b1dd691" target="_blank">Introduction To CTFs</a></li>

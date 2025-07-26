@@ -507,7 +507,10 @@ async function saveLayout() {
   });
   
   try {
-    await setDoc(doc(db, "layouts", user.uid), { layout });
+    await setDoc(doc(db, "layouts", user.uid), { 
+      layout,
+      minimizedModules: minimizedModules
+    });
   } catch (error) {
     console.error("Error saving layout:", error);
   }
@@ -520,7 +523,9 @@ async function loadLayout() {
   try {
     const layoutDoc = await getDoc(doc(db, "layouts", user.uid));
     if (layoutDoc.exists()) {
-      const savedLayout = layoutDoc.data().layout;
+      const data = layoutDoc.data();
+      const savedLayout = data.layout;
+      const savedMinimized = data.minimizedModules || [];
       
       Object.entries(savedLayout).forEach(([moduleId, position]) => {
         const section = document.querySelector(`[data-module="${moduleId}"]`);
@@ -530,6 +535,12 @@ async function loadLayout() {
           section.style.width = position.width;
           section.style.height = position.height;
         }
+      });
+      
+      // Restore minimized states
+      savedMinimized.forEach(moduleId => {
+        const sectionId = `${moduleId}-section`;
+        minimizeModule(sectionId);
       });
     }
   } catch (error) {
@@ -782,6 +793,56 @@ window.deleteTicket = async function(ticketId) {
     console.error('Error deleting ticket:', error);
     alert('Error deleting ticket');
   }
+};
+
+// Minimize functionality
+let minimizedModules = [];
+
+window.minimizeModule = function(moduleId) {
+  const module = document.getElementById(moduleId);
+  const moduleTitle = module.querySelector('h2').textContent.replace(' −', '');
+  
+  // Hide the module
+  module.style.display = 'none';
+  
+  // Create minimized panel
+  const panel = document.createElement('div');
+  panel.className = 'minimized-panel';
+  panel.id = `minimized-${moduleId}`;
+  panel.innerHTML = `
+    <span>${moduleTitle}</span>
+    <button onclick="restoreModule('${moduleId}')" style="background: #ff8f40; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer;">+</button>
+  `;
+  
+  // Position panel
+  const existingPanels = document.querySelectorAll('.minimized-panel').length;
+  panel.style.top = `${100 + (existingPanels * 50)}px`;
+  
+  document.body.appendChild(panel);
+  const moduleDataId = module.dataset.module;
+  minimizedModules.push(moduleDataId);
+  saveLayout();
+};
+
+window.restoreModule = function(moduleId) {
+  const module = document.getElementById(moduleId);
+  const panel = document.getElementById(`minimized-${moduleId}`);
+  
+  // Show the module
+  module.style.display = 'flex';
+  
+  // Remove minimized panel
+  panel.remove();
+  
+  // Update positions of remaining panels
+  const remainingPanels = document.querySelectorAll('.minimized-panel');
+  remainingPanels.forEach((panel, index) => {
+    panel.style.top = `${100 + (index * 50)}px`;
+  });
+  
+  const moduleDataId = module.dataset.module;
+  minimizedModules = minimizedModules.filter(id => id !== moduleDataId);
+  saveLayout();
 };
 
 // Initialize
