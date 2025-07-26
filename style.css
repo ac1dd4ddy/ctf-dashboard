@@ -131,6 +131,93 @@ section {
   overflow-wrap: break-word;
 }
 
+#tickets-section {
+  min-width: 500px;
+  min-height: 450px;
+}
+
+.ticket-item {
+  border: 1px solid #e7e8e9;
+  border-radius: 5px;
+  margin: 10px 0;
+  padding: 15px;
+  background: #f9f9f9;
+}
+
+body.dark .ticket-item {
+  border-color: #1f2430;
+  background: #1a1f2e;
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.ticket-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status-open {
+  background: #fee;
+  color: #c53030;
+}
+
+.status-resolved {
+  background: #f0fff4;
+  color: #38a169;
+}
+
+.ticket-messages {
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 10px 0;
+}
+
+.message {
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  background: #fff;
+  border-left: 3px solid #ff8f40;
+}
+
+body.dark .message {
+  background: #0d1117;
+  border-left-color: #ffb454;
+}
+
+.message-author {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #ff8f40;
+}
+
+body.dark .message-author {
+  color: #ffb454;
+}
+
+.ticket-reply {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ticket-reply input {
+  flex: 1;
+  margin: 0;
+}
+
+.ticket-reply button {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
 section:hover {
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }

@@ -31,6 +31,7 @@ onAuthStateChanged(auth, user => {
     
     loadUserNotes(user.uid);
     loadUserProgress(user.uid);
+    loadUserTickets(user.email);
     loadLayout();
   } else {
     signInWithPopup(auth, provider).catch(console.error);
@@ -407,6 +408,9 @@ function initializeLayout() {
     } else if (moduleId === 'ctf') {
       width = '450px';
       height = '350px';
+    } else if (moduleId === 'tickets') {
+      width = '500px';
+      height = '450px';
     }
     
     section.style.left = `${snapToGrid((index % 2) * 420 + 20)}px`;
@@ -529,6 +533,253 @@ async function loadLayout() {
     console.error("Error loading layout:", error);
   }
 }
+
+// Ticket system functionality
+function sanitizeInput(input) {
+  const div = document.createElement('div');
+  div.textContent = input;
+  return div.innerHTML;
+}
+
+window.createTicket = async function() {
+  const email = document.getElementById('ticket-email').value.trim();
+  const subject = document.getElementById('ticket-subject').value.trim();
+  const description = document.getElementById('ticket-description').value.trim();
+  const user = auth.currentUser;
+  
+  if (!email || !subject || !description || !user) {
+    alert('Please fill all fields and ensure you are logged in');
+    return;
+  }
+  
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Please enter a valid email address');
+    return;
+  }
+  
+  try {
+    await addDoc(collection(db, 'tickets'), {
+      createdBy: user.uid,
+      createdByEmail: user.email,
+      assignedTo: sanitizeInput(email),
+      subject: sanitizeInput(subject),
+      description: sanitizeInput(description),
+      status: 'open',
+      createdAt: serverTimestamp(),
+      messages: []
+    });
+    
+    document.getElementById('ticket-email').value = '';
+    document.getElementById('ticket-subject').value = '';
+    document.getElementById('ticket-description').value = '';
+    
+    alert('Ticket created successfully!');
+  } catch (error) {
+    console.error('Error creating ticket:', error);
+    alert('Error creating ticket');
+  }
+};
+
+function loadUserTickets(userEmail) {
+  const ticketsRef = collection(db, 'tickets');
+  
+  // Load all tickets and filter client-side
+  onSnapshot(ticketsRef, snapshot => {
+    const ticketsList = document.getElementById('tickets-list');
+    ticketsList.innerHTML = '';
+    
+    snapshot.forEach(docSnapshot => {
+      const ticket = docSnapshot.data();
+      const ticketId = docSnapshot.id;
+      
+      // Show tickets created by user or assigned to user
+      if (ticket.createdByEmail === userEmail || ticket.assignedTo === userEmail) {
+        const type = ticket.createdByEmail === userEmail ? 'created' : 'assigned';
+        const ticketElement = createTicketElement(ticket, ticketId, type);
+        ticketsList.appendChild(ticketElement);
+      }
+    });
+  });
+}
+
+
+
+function createTicketElement(ticket, ticketId, type) {
+  const div = document.createElement('div');
+  div.className = 'ticket-item';
+  div.id = `ticket-${ticketId}`;
+  
+  const statusClass = ticket.status === 'open' ? 'status-open' : 'status-resolved';
+  const typeLabel = type === 'created' ? 'Created by you' : 'Assigned to you';
+  
+  div.innerHTML = `
+    <div class="ticket-header">
+      <div>
+        <strong>${ticket.subject}</strong>
+        <small style="display: block; color: #666;">${typeLabel}</small>
+      </div>
+      <span class="ticket-status ${statusClass}">${ticket.status.toUpperCase()}</span>
+    </div>
+    <p style="margin: 10px 0; color: #666;">${ticket.description}</p>
+    <div class="ticket-messages" id="messages-${ticketId}"></div>
+    ${ticket.status === 'open' ? `
+      <div class="ticket-reply">
+        <input id="reply-${ticketId}" placeholder="Type your reply..." />
+        <button onclick="replyToTicket('${ticketId}')">Reply</button>
+        <button onclick="resolveTicket('${ticketId}')">Resolve</button>
+      </div>
+    ` : `
+      <div class="ticket-reply">
+        <button onclick="deleteTicket('${ticketId}')" style="background: #e53e3e;">Delete</button>
+      </div>
+    `}
+  `;
+  
+  // Load messages
+  loadTicketMessages(ticketId);
+  
+  return div;
+}
+
+function updateTicketElement(element, ticket, ticketId, type) {
+  const statusSpan = element.querySelector('.ticket-status');
+  statusSpan.textContent = ticket.status.toUpperCase();
+  statusSpan.className = `ticket-status ${ticket.status === 'open' ? 'status-open' : 'status-resolved'}`;
+  
+  // Remove reply section if resolved
+  if (ticket.status === 'resolved') {
+    const replySection = element.querySelector('.ticket-reply');
+    if (replySection) replySection.remove();
+  }
+}
+
+function loadTicketMessages(ticketId) {
+  const ticketRef = doc(db, 'tickets', ticketId);
+  onSnapshot(ticketRef, docSnapshot => {
+    if (docSnapshot.exists()) {
+      const ticket = docSnapshot.data();
+      const messagesContainer = document.getElementById(`messages-${ticketId}`);
+      if (messagesContainer && ticket.messages) {
+        messagesContainer.innerHTML = '';
+        ticket.messages.forEach(message => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message';
+          messageDiv.innerHTML = `
+            <div class="message-author">${message.author}</div>
+            <div>${message.text}</div>
+            <small style="color: #666;">${message.timestamp?.toDate ? message.timestamp.toDate().toLocaleString() : message.timestamp?.toLocaleString() || 'Just now'}</small>
+          `;
+          messagesContainer.appendChild(messageDiv);
+        });
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }
+  });
+}
+
+window.replyToTicket = async function(ticketId) {
+  const replyInput = document.getElementById(`reply-${ticketId}`);
+  const message = replyInput.value.trim();
+  const user = auth.currentUser;
+  
+  if (!message || !user) return;
+  
+  try {
+    const ticketRef = doc(db, 'tickets', ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      
+      // IDOR protection: only allow creator or assignee to reply
+      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
+        alert('You are not authorized to reply to this ticket');
+        return;
+      }
+      
+      const newMessage = {
+        author: user.email,
+        text: sanitizeInput(message),
+        timestamp: new Date()
+      };
+      
+      const updatedMessages = [...(ticket.messages || []), newMessage];
+      
+      await updateDoc(ticketRef, {
+        messages: updatedMessages
+      });
+      
+      replyInput.value = '';
+    }
+  } catch (error) {
+    console.error('Error replying to ticket:', error);
+    alert('Error sending reply');
+  }
+};
+
+window.resolveTicket = async function(ticketId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  try {
+    const ticketRef = doc(db, 'tickets', ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      
+      // IDOR protection: only allow creator or assignee to resolve
+      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
+        alert('You are not authorized to resolve this ticket');
+        return;
+      }
+      
+      await updateDoc(ticketRef, {
+        status: 'resolved',
+        resolvedAt: serverTimestamp(),
+        resolvedBy: user.email
+      });
+    }
+  } catch (error) {
+    console.error('Error resolving ticket:', error);
+    alert('Error resolving ticket');
+  }
+};
+
+window.deleteTicket = async function(ticketId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  if (!confirm('Are you sure you want to delete this ticket?')) return;
+  
+  try {
+    const ticketRef = doc(db, 'tickets', ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      
+      // IDOR protection: only allow creator or assignee to delete
+      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
+        alert('You are not authorized to delete this ticket');
+        return;
+      }
+      
+      // Only allow deletion of resolved tickets
+      if (ticket.status !== 'resolved') {
+        alert('Only resolved tickets can be deleted');
+        return;
+      }
+      
+      await deleteDoc(ticketRef);
+    }
+  } catch (error) {
+    console.error('Error deleting ticket:', error);
+    alert('Error deleting ticket');
+  }
+};
 
 // Initialize
 loadUpcomingCTFs();

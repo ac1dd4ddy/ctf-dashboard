@@ -53,6 +53,18 @@
       </div>
       <div class="resize-handle"></div>
     </section>
+
+    <section id="tickets-section" data-module="tickets">
+      <h2>Support Tickets</h2>
+      <div id="ticket-create">
+        <input id="ticket-email" placeholder="User email" style="width: 45%; margin-right: 5%;" />
+        <input id="ticket-subject" placeholder="Subject" style="width: 45%; margin-right: 5%;" />
+        <textarea id="ticket-description" placeholder="Description" style="width: 100%; height: 60px; margin: 10px 0; padding: 10px; border: 2px solid #e7e8e9; border-radius: 5px; resize: vertical;"></textarea>
+        <button onclick="createTicket()">Create Ticket</button>
+      </div>
+      <div id="tickets-list"></div>
+      <div class="resize-handle"></div>
+    </section>
   </div>
 
   <button id="theme-toggle" style="position: fixed; top: 20px; left: 20px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🌙</button>
