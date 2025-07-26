@@ -798,7 +798,7 @@ window.deleteTicket = async function(ticketId) {
 // Minimize functionality
 let minimizedModules = [];
 
-window.minimizeModule = function(moduleId) {
+function minimizeModule(moduleId) {
   const module = document.getElementById(moduleId);
   const moduleTitle = module.querySelector('h2').textContent.replace(' −', '');
   
@@ -822,9 +822,9 @@ window.minimizeModule = function(moduleId) {
   const moduleDataId = module.dataset.module;
   minimizedModules.push(moduleDataId);
   saveLayout();
-};
+}
 
-window.restoreModule = function(moduleId) {
+function restoreModule(moduleId) {
   const module = document.getElementById(moduleId);
   const panel = document.getElementById(`minimized-${moduleId}`);
   
@@ -843,7 +843,11 @@ window.restoreModule = function(moduleId) {
   const moduleDataId = module.dataset.module;
   minimizedModules = minimizedModules.filter(id => id !== moduleDataId);
   saveLayout();
-};
+}
+
+// Make functions globally available
+window.minimizeModule = minimizeModule;
+window.restoreModule = restoreModule;
 
 // Initialize
 loadUpcomingCTFs();
