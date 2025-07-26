@@ -1210,4 +1210,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }, 1000);
+  
+  // Fade out user info elements after 15 seconds
+  setTimeout(() => {
+    const userDisplay = document.getElementById('user-display');
+    const popupNote = document.querySelector('p[style*="opacity: 0.8"]');
+    const dragHint = document.getElementById('drag-hint');
+    
+    [userDisplay, popupNote, dragHint].forEach(element => {
+      if (element) {
+        element.style.transition = 'opacity 2s ease';
+        setTimeout(() => {
+          element.style.opacity = '0';
+          setTimeout(() => element.remove(), 2000);
+        }, 50);
+      }
+    });
+  }, 15000);
 });
