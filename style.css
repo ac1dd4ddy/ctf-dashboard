@@ -72,16 +72,6 @@ body.dark h3 {
   position: relative;
   min-height: calc(200vh - 160px);
   width: 100%;
-  background-image: 
-    linear-gradient(rgba(255, 143, 64, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 143, 64, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-body.dark .grid-container {
-  background-image: 
-    linear-gradient(rgba(255, 180, 84, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 180, 84, 0.1) 1px, transparent 1px);
 }
 
 h1 {
