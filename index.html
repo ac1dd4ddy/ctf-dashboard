@@ -15,14 +15,14 @@
 
   <section>
     <h2>Team Progress</h2>
-    <pre id="progress"></pre>
+    <ul id="progress-list"></ul>
   </section>
 
   <section>
-    <h2>TODO</h2>
-    <ul id="todo-list"></ul>
-    <input id="todo-input" placeholder="Add a task" />
-    <button onclick="addTodo()">Add</button>
+    <h2>Notes</h2>
+    <ul id="Notes-list"></ul>
+    <input id="Notes-input" placeholder="Add a task" />
+    <button onclick="addNotes()">Add</button>
   </section>
 
   <button id="sign-out" style="display: none;">Sign Out</button>
@@ -32,6 +32,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+  import { doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD8G-YzVnERa6if7BgY1WXrR-j3CcF-Xos",
@@ -52,7 +53,7 @@
 const signOutBtn = document.getElementById("sign-out");
 
 onAuthStateChanged(auth, user => {
-  const todoList = document.getElementById("todo-list");
+  const NotesList = document.getElementById("Notes-list");
   const emailDisplay = document.createElement("p");
 
   if (user) {
@@ -60,22 +61,22 @@ onAuthStateChanged(auth, user => {
     document.body.insertBefore(emailDisplay, signOutBtn);
     signOutBtn.style.display = "inline-block";
 
-    const todosRef = collection(db, "todos");
-    const q = query(todosRef, where("uid", "==", user.uid));
+    const NotessRef = collection(db, "Notess");
+    const q = query(NotessRef, where("uid", "==", user.uid));
 
     onSnapshot(q, snapshot => {
-      todoList.innerHTML = "";
+      NotesList.innerHTML = "";
       snapshot.forEach(doc => {
         const li = document.createElement("li");
         li.textContent = doc.data().text;
-        todoList.appendChild(li);
+        NotesList.appendChild(li);
       });
     });
 
-    window.addTodo = async function () {
-      const input = document.getElementById("todo-input");
+    window.addNotes = async function () {
+      const input = document.getElementById("Notes-input");
       if (input.value.trim()) {
-        await addDoc(todosRef, {
+        await addDoc(NotessRef, {
           text: input.value,
           createdAt: serverTimestamp(),
           uid: user.uid
@@ -87,6 +88,44 @@ onAuthStateChanged(auth, user => {
   } else {
     signInWithPopup(auth, provider).catch(console.error);
   }
+  
+
+const progressRef = doc(db, "progress", "team");
+
+// Load progress from Firestore
+async function loadProgress() {
+  const snapshot = await getDoc(progressRef);
+  const data = snapshot.exists() ? snapshot.data() : {};
+
+  const progressList = document.getElementById("progress-list");
+  progressList.innerHTML = "";
+
+  Object.entries(data).forEach(([ctf, status]) => {
+    const li = document.createElement("li");
+
+    const label = document.createElement("span");
+    label.textContent = `${ctf}: `;
+
+    const select = document.createElement("select");
+    ["Planned", "In Progress", "Completed"].forEach(optionValue => {
+      const option = document.createElement("option");
+      option.value = option.textContent = optionValue;
+      if (optionValue === status) option.selected = true;
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change", async () => {
+      await updateDoc(progressRef, { [ctf]: select.value });
+    });
+
+    li.appendChild(label);
+    li.appendChild(select);
+    progressList.appendChild(li);
+  });
+}
+
+loadProgress();
+
 });
 
 signOutBtn.addEventListener("click", () => {
