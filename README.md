@@ -1,156 +1,130 @@
 # CTF Dashboard
 
-A modern, customizable dashboard for Capture The Flag (CTF) competitions with draggable modules, real-time collaboration, and comprehensive tracking features.
+A comprehensive, customizable dashboard designed specifically for Capture The Flag (CTF) teams. This platform combines event tracking, team collaboration, progress management, and support systems into a unified workspace that adapts to your team's workflow.
 
-## Features
+## Why CTF Teams Need This Dashboard
 
-### 🎯 CTF Tracking
-- **Upcoming CTFs**: Automatically fetches events from CTFTime API with full details (name, date, time in CDT, duration, description)
-- **Clickable Events**: Click any CTF card to open the event URL
-- **Smart Truncation**: Long descriptions are automatically truncated with "..." for better display
+CTF competitions require coordination, planning, and real-time collaboration. This dashboard addresses common challenges:
+- **Event Discovery**: Never miss important CTF competitions
+- **Team Coordination**: Collaborate in real-time during competitions
+- **Progress Tracking**: Monitor individual and team progress across multiple events
+- **Knowledge Management**: Preserve strategies, notes, and solutions
+- **Support System**: Handle team issues and requests efficiently
 
-### 📊 Progress Management
-- **Personal Progress Tracking**: Track your progress on different CTFs (Planned/In Progress/Completed)
-- **User-Specific Data**: Each user sees only their own progress data
-- **Add/Remove CTFs**: Easily add new CTFs to track or delete existing ones
-- **Real-time Updates**: Changes sync instantly across sessions
+## Core Features
 
-### 📝 Notes System
-- **Personal Notes**: Private note-taking with Firebase authentication
-- **Click to Delete**: Hover over notes (turns red) and click to delete with confirmation
-- **Real-time Sync**: Notes update instantly across devices
+### 🎯 CTF Event Tracking
+- **Live CTF Feed**: Automatically pulls upcoming competitions from CTFTime API
+- **Detailed Information**: View event names, dates/times (CDT), duration, and descriptions
+- **Quick Access**: Click any event to instantly open the competition website
+- **Smart Display**: Long descriptions are truncated for clean presentation
 
-### 🤝 Collaborative Notes
-- **Team Collaboration**: Create or join team note-taking sessions with username/password
-- **Real-time Editing**: Multiple users can edit simultaneously with live updates
-- **Snapshot System**: Save named snapshots of collaborative notes at any time
-- **Load Snapshots**: Restore previous versions from saved snapshots
-- **Secure Access**: Team-based authentication with Firebase storage
+### 📊 Individual Progress Management
+- **Personal Tracking**: Monitor your progress across multiple CTFs (Planned/In Progress/Completed)
+- **Dynamic Management**: Add new competitions or remove completed ones
+- **Status Updates**: Easily change your participation status
+- **Real-time Sync**: Changes are instantly saved and synchronized
 
-### 🎨 Customizable Interface
-- **Draggable Modules**: Move any module anywhere on the screen with grid snapping
-- **Resizable Modules**: Resize modules using handles in bottom-right corners
-- **Layout Persistence**: Your custom layout is saved to Firebase and restored on login
-- **Grid Snapping**: All movements snap to a 20px grid for clean alignment
-- **Full-Screen Workspace**: Modules can be positioned across the entire screen width
+### 📝 Personal Notes System
+- **Private Workspace**: Keep personal strategies, solutions, and observations
+- **Quick Actions**: Add notes instantly, delete with hover-and-click
+- **Persistent Storage**: Notes are saved across sessions and devices
+- **Instant Sync**: Changes appear immediately across all your devices
 
-### 🌙 Theme System
-- **Dark/Light Mode**: Toggle between Ayu Dark and Ayu Light themes
-- **Theme Persistence**: Your theme preference is saved locally
-- **Consistent Styling**: All modules and elements adapt to theme changes
+### 🤝 Team Collaboration Hub
+- **Real-time Editing**: Multiple team members can edit shared documents simultaneously
+- **Team Rooms**: Create or join password-protected collaboration spaces
+- **Version Control**: Save named snapshots of important collaborative work
+- **History Management**: Load previous versions when needed
+- **Live Updates**: See changes from teammates in real-time
 
-### 🔐 Authentication & Security
-- **Google Authentication**: Secure login with Google accounts
-- **User-Specific Data**: All data is isolated per user
-- **Firebase Security**: Proper Firestore rules for data protection
+### 🎫 Support Ticket System
+- **Issue Tracking**: Create tickets for team members to address problems or requests
+- **Two-way Communication**: Both ticket creator and assignee can communicate
+- **Status Management**: Track tickets from creation to resolution
+- **Clean Resolution**: Delete resolved tickets to maintain organization
+
+### 🎨 Fully Customizable Workspace
+- **Drag & Drop Interface**: Position modules anywhere on your screen
+- **Resizable Modules**: Adjust module sizes to fit your workflow
+- **Grid Alignment**: Automatic snapping ensures clean, organized layouts
+- **Layout Memory**: Your custom arrangement is saved and restored automatically
+- **Full-screen Workspace**: Utilize your entire screen real estate
+
+### 🌙 Adaptive Theme System
+- **Dual Themes**: Switch between Ayu Light and Ayu Dark color schemes
+- **Eye Comfort**: Dark mode reduces strain during long competition sessions
+- **Consistent Design**: All modules adapt seamlessly to theme changes
+- **Personal Preference**: Theme choice is remembered across sessions
+
+## How It Works
+
+The dashboard uses modern web technologies to provide a seamless experience:
+
+- **Real-time Database**: Firebase Firestore ensures instant synchronization across all team members
+- **Google Authentication**: Secure, hassle-free login using existing Google accounts
+- **API Integration**: Direct connection to CTFTime for up-to-date competition information
+- **Client-side Storage**: Layout preferences and themes are stored locally for instant loading
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
+
+## Perfect for CTF Teams Because
+
+### During Competitions
+- **Centralized Information**: All team members see the same up-to-date information
+- **Real-time Collaboration**: Work together on solutions without conflicts
+- **Quick Communication**: Use tickets for urgent requests or clarifications
+- **Progress Visibility**: Everyone knows who's working on what
+
+### Between Competitions
+- **Event Planning**: Track upcoming competitions and plan participation
+- **Knowledge Preservation**: Save successful strategies and solutions
+- **Team Coordination**: Assign preparation tasks and track completion
+- **Skill Development**: Use notes to document learning and improvement areas
+
+### For Team Management
+- **Individual Accountability**: Each member tracks their own progress
+- **Support System**: Handle team issues through the ticket system
+- **Flexible Workspace**: Each member can customize their interface
+- **Historical Records**: Snapshots preserve important collaborative work
+
+## Quick Start
+
+1. **Access**: Open `index.html` in any modern web browser
+2. **Authenticate**: Sign in with your Google account
+3. **Customize**: Drag modules to your preferred positions and sizes
+4. **Collaborate**: Create or join team collaboration spaces
+5. **Compete**: Use during CTF competitions for real-time coordination
+
+## Module Overview
+
+### Upcoming CTFs
+Stay informed about competition opportunities with automatic updates from CTFTime, complete with scheduling information and direct links to registration.
+
+### Team Progress
+Track individual participation across multiple competitions, from initial planning through completion, with easy status updates and management.
+
+### Personal Notes
+Maintain private documentation of strategies, solutions, and observations that persist across sessions and sync across devices.
+
+### Collaborative Notes
+Work together in real-time on shared documents, with version control through snapshots and secure team-based access.
+
+### Support Tickets
+Manage team communication and issue resolution through a structured ticket system with full conversation history.
 
 ## Files Structure
 
-- `index.html` - Main dashboard interface with modular sections
-- `script.js` - Complete JavaScript functionality with Firebase integration
-- `style.css` - Responsive styling with dark/light theme support
-- `firestore.rules` - Firebase security rules for proper data access
+- `index.html` - Main dashboard interface with all modules
+- `script.js` - Complete functionality with real-time features
+- `style.css` - Responsive styling with theme system
+- `help.html` - Comprehensive user guide and documentation
 
-## Setup Instructions
+## Technical Foundation
 
-1. **Open the Dashboard**
-   - Open `index.html` in a web browser
-   - Enable popups if prompted (required for CTF links)
+- **Frontend**: Modern HTML5, CSS3, and JavaScript (ES6 modules)
+- **Backend**: Firebase ecosystem (Authentication, Firestore database)
+- **APIs**: CTFTime integration via CORS proxy
+- **Design**: Custom CSS with professional Ayu color schemes
+- **Features**: Advanced drag-and-drop, real-time collaboration, responsive layout
 
-2. **Authentication**
-   - Sign in with your Google account
-   - Your email will appear below the title
-
-3. **Customize Layout**
-   - Drag modules by clicking and dragging anywhere on the module
-   - Resize modules using the orange handles in bottom-right corners
-   - Your layout automatically saves and restores on next login
-
-4. **Use Features**
-   - Click CTF events to visit their websites
-   - Add/edit personal notes and progress tracking
-   - Create/join collaborative team notes
-   - Save snapshots of collaborative work
-   - Toggle between light/dark themes
-
-## Module Details
-
-### Upcoming CTFs Module
-- Displays 5 upcoming CTF events from CTFTime
-- Shows: Event name, full date/time in CDT, duration, description
-- Scrollable content area for long lists
-- Click any event to open in new tab
-
-### Team Progress Module
-- Personal CTF progress tracking
-- Add new CTFs with the "+" button
-- Change status via dropdown (Planned/In Progress/Completed)
-- Delete CTFs by clicking the name (turns red on hover)
-
-### Notes Module
-- Personal note-taking system
-- Add notes with text input and "Add" button
-- Delete notes by clicking them (turns red on hover)
-- Confirmation dialog prevents accidental deletion
-
-### Collaborative Notes Module
-- Team-based real-time note editing
-- Create new teams or join existing ones with team name/password
-- Live collaborative editing with multiple users
-- Save named snapshots of current content
-- Load previous snapshots from dropdown
-- Leave team to return to join/create interface
-
-## Technologies Used
-
-- **Frontend**: HTML5, CSS3, JavaScript (ES6 modules)
-- **Backend**: Firebase (Authentication & Firestore)
-- **APIs**: CTFTime API with CORS proxy
-- **Styling**: Custom CSS with Ayu theme colors
-- **Features**: Drag & drop, real-time collaboration, responsive design
-
-## Firebase Configuration
-
-### Collections Used
-- `notes` - Personal user notes (uid-based)
-- `progress` - Individual CTF progress tracking (uid-based)
-- `teams` - Collaborative team notes (team name-based)
-- `snapshots` - Saved snapshots of team notes
-- `layouts` - User layout preferences (uid-based)
-
-### Security Rules Setup
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: `ac1dd4ddy-ctf-dashboard`
-3. Navigate to **Firestore Database** > **Rules**
-4. Replace existing rules with content from `firestore.rules`:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-5. Click **Publish**
-
-## Usage Tips
-
-- **Layout**: Arrange modules however you prefer - your layout persists between sessions
-- **Collaboration**: Share team names/passwords securely with team members
-- **Snapshots**: Use descriptive names for snapshots to easily identify them later
-- **Themes**: Dark mode is great for extended use, light mode for presentations
-- **Mobile**: Dashboard is responsive and works on mobile devices
-- **Performance**: All data syncs in real-time without page refreshes
-
-## Troubleshooting
-
-- **Layout not saving**: Ensure you're logged in and Firestore rules are configured
-- **CTFs not loading**: Check internet connection and CORS proxy availability
-- **Collaboration issues**: Verify team name/password and Firebase rules
-- **Theme not persisting**: Check browser local storage permissions
-- **Popup blocked**: Enable popups for CTF links to work properly
+This dashboard transforms how CTF teams organize, collaborate, and compete by providing a unified platform that grows with your team's needs.
