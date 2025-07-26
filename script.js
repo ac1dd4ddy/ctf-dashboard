@@ -415,6 +415,12 @@ function initializeLayout() {
     } else if (moduleId === 'knowledge') {
       width = '350px';
       height = '200px';
+    } else if (moduleId === 'decoder') {
+      width = '400px';
+      height = '350px';
+    } else if (moduleId === 'vigenere') {
+      width = '400px';
+      height = '380px';
     }
     
     section.style.left = `${snapToGrid((index % 2) * 420 + 20)}px`;
@@ -855,9 +861,155 @@ function restoreModule(moduleId) {
 window.minimizeModule = minimizeModule;
 window.restoreModule = restoreModule;
 
+// Decoder functionality
+function base32Decode(input) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  let result = '';
+  
+  input = input.toUpperCase().replace(/[^A-Z2-7]/g, '');
+  
+  for (let i = 0; i < input.length; i++) {
+    const val = alphabet.indexOf(input[i]);
+    if (val >= 0) bits += val.toString(2).padStart(5, '0');
+  }
+  
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    result += String.fromCharCode(parseInt(bits.substr(i, 8), 2));
+  }
+  
+  return result;
+}
+
+window.decodeText = function() {
+  const input = document.getElementById('decoder-input').value;
+  const type = document.getElementById('decoder-type').value;
+  const output = document.getElementById('decoder-output');
+  
+  try {
+    let result = '';
+    
+    switch(type) {
+      case 'hex':
+        result = input.replace(/[^0-9A-Fa-f]/g, '').replace(/(..)/g, (hex) => 
+          String.fromCharCode(parseInt(hex, 16))
+        );
+        break;
+      case 'base64':
+        result = atob(input.replace(/[^A-Za-z0-9+/=]/g, ''));
+        break;
+      case 'base32':
+        result = base32Decode(input);
+        break;
+      case 'rot13':
+        result = input.replace(/[A-Za-z]/g, (char) => {
+          const start = char <= 'Z' ? 65 : 97;
+          return String.fromCharCode(((char.charCodeAt(0) - start + 13) % 26) + start);
+        });
+        break;
+      case 'url':
+        result = decodeURIComponent(input);
+        break;
+    }
+    
+    output.value = result;
+  } catch (error) {
+    output.value = 'Error: Invalid input for selected encoding';
+  }
+};
+
 // Initialize
 loadUpcomingCTFs();
 initializeLayout();
+
+// Vigenere cipher functionality
+function vigenereDecrypt(text, key) {
+  let result = '';
+  let keyIndex = 0;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char.match(/[A-Za-z]/)) {
+      const isUpper = char === char.toUpperCase();
+      const charCode = char.toUpperCase().charCodeAt(0) - 65;
+      const keyChar = key[keyIndex % key.length].toUpperCase().charCodeAt(0) - 65;
+      const decrypted = (charCode - keyChar + 26) % 26;
+      result += String.fromCharCode(decrypted + 65);
+      if (!isUpper) result = result.slice(0, -1) + result.slice(-1).toLowerCase();
+      keyIndex++;
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+function calculateIC(text) {
+  const freq = {};
+  let letters = 0;
+  
+  for (const char of text.toUpperCase()) {
+    if (char.match(/[A-Z]/)) {
+      freq[char] = (freq[char] || 0) + 1;
+      letters++;
+    }
+  }
+  
+  let ic = 0;
+  for (const count of Object.values(freq)) {
+    ic += count * (count - 1);
+  }
+  
+  return letters > 1 ? ic / (letters * (letters - 1)) : 0;
+}
+
+window.solveVigenere = function() {
+  const input = document.getElementById('vigenere-input').value;
+  const key = document.getElementById('vigenere-key').value.trim();
+  const output = document.getElementById('vigenere-output');
+  
+  if (!input.trim()) {
+    output.value = 'Please enter encrypted text';
+    return;
+  }
+  
+  if (key) {
+    // Decrypt with provided key
+    output.value = vigenereDecrypt(input, key);
+  } else {
+    // Brute force key lengths 1-10
+    let bestResult = '';
+    let bestIC = 0;
+    let bestKey = '';
+    
+    for (let keyLen = 1; keyLen <= 10; keyLen++) {
+      // Try common keys for this length
+      const commonKeys = ['KEY', 'SECRET', 'PASSWORD', 'CIPHER', 'CODE', 'FLAG', 'CTF'];
+      
+      for (const testKey of commonKeys) {
+        if (testKey.length >= keyLen) {
+          const truncatedKey = testKey.substring(0, keyLen);
+          const decrypted = vigenereDecrypt(input, truncatedKey);
+          const ic = calculateIC(decrypted);
+          
+          if (ic > bestIC) {
+            bestIC = ic;
+            bestResult = decrypted;
+            bestKey = truncatedKey;
+          }
+        }
+      }
+    }
+    
+    output.value = bestResult ? `Key: ${bestKey}\n\n${bestResult}` : 'Could not find valid key. Try providing the key manually.';
+  }
+};
+
+// Auto-minimize decoder and vigenere on launch
+setTimeout(() => {
+  minimizeModule('decoder-section');
+  minimizeModule('vigenere-section');
+}, 100);
 
 // Hide drag hint after 5 seconds
 setTimeout(() => {
