@@ -32,7 +32,7 @@ onAuthStateChanged(auth, user => {
     signOutBtn.style.display = "inline-block";
     
     loadUserNotes(user.uid);
-    loadProgress();
+    loadUserProgress(user.uid);
   } else {
     signInWithPopup(auth, provider).catch(console.error);
   }
@@ -56,8 +56,14 @@ function loadUserNotes(uid) {
       li.textContent = docSnapshot.data().text;
       li.style.cursor = "pointer";
       li.title = "Click to delete";
-      li.addEventListener("mouseenter", () => li.style.backgroundColor = "#ffcccc");
-      li.addEventListener("mouseleave", () => li.style.backgroundColor = "#f7fafc");
+      li.addEventListener("mouseenter", () => {
+        li.style.backgroundColor = "#fee";
+        li.style.color = "#e53e3e";
+      });
+      li.addEventListener("mouseleave", () => {
+        li.style.backgroundColor = "#f7fafc";
+        li.style.color = "#333";
+      });
       li.addEventListener("click", async () => {
         if (confirm("Delete this note?")) {
           await deleteDoc(doc(db, "notes", docSnapshot.id));
@@ -91,46 +97,78 @@ window.addNotes = async function() {
 };
 
 // Progress functionality
-async function loadProgress() {
-  try {
-    const progressRef = doc(db, "progress", "team");
-    const snapshot = await getDoc(progressRef);
-    const data = snapshot.exists() ? snapshot.data() : {
-      "HackTheBox": "Completed",
-      "picoCTF": "In Progress",
-      "BDSec July 2025": "Planned"
-    };
-    
+function loadUserProgress(uid) {
+  const progressRef = collection(db, "progress");
+  const q = query(progressRef, where("uid", "==", uid));
+  
+  onSnapshot(q, snapshot => {
     progressList.innerHTML = "";
-    
-    Object.entries(data).forEach(([ctf, status]) => {
+    snapshot.forEach(docSnapshot => {
+      const data = docSnapshot.data();
       const li = document.createElement("li");
       const label = document.createElement("span");
-      label.textContent = `${ctf}: `;
+      label.textContent = `${data.ctf}: `;
+      label.style.cursor = "pointer";
+      label.title = "Click to delete";
+      label.addEventListener("mouseenter", () => {
+        li.style.backgroundColor = "#fee";
+        label.style.color = "#e53e3e";
+      });
+      label.addEventListener("mouseleave", () => {
+        li.style.backgroundColor = "#f7fafc";
+        label.style.color = "#333";
+      });
+      label.addEventListener("click", async () => {
+        if (confirm(`Delete ${data.ctf}?`)) {
+          await deleteDoc(doc(db, "progress", docSnapshot.id));
+        }
+      });
       
       const select = document.createElement("select");
       ["Planned", "In Progress", "Completed"].forEach(optionValue => {
         const option = document.createElement("option");
         option.value = option.textContent = optionValue;
-        if (optionValue === status) option.selected = true;
+        if (optionValue === data.status) option.selected = true;
         select.appendChild(option);
       });
       
       select.addEventListener("change", async () => {
-        try {
-          await updateDoc(progressRef, { [ctf]: select.value });
-        } catch (error) {
-          console.error("Error updating progress:", error);
-        }
+        await updateDoc(doc(db, "progress", docSnapshot.id), { status: select.value });
       });
       
       li.appendChild(label);
       li.appendChild(select);
       progressList.appendChild(li);
     });
-  } catch (error) {
+    
+    // Add plus button
+    const addLi = document.createElement("li");
+    addLi.innerHTML = `<div style="text-align: center; font-size: 2rem; color: rgba(118, 75, 162, 0.4); cursor: pointer;">+</div>`;
+    addLi.style.border = "2px dashed rgba(118, 75, 162, 0.4)";
+    addLi.style.backgroundColor = "rgba(118, 75, 162, 0.1)";
+    addLi.style.justifyContent = "center";
+    addLi.addEventListener("click", () => {
+      const ctfName = prompt("Enter CTF name:");
+      if (ctfName) addProgress(uid, ctfName);
+    });
+    progressList.appendChild(addLi);
+  }, error => {
     console.error("Error loading progress:", error);
-    progressList.innerHTML = "<li>Using default progress data</li>";
+    progressList.innerHTML = "<li>Error loading progress. Check Firestore rules.</li>";
+  });
+}
+
+async function addProgress(uid, ctfName) {
+  try {
+    await addDoc(collection(db, "progress"), {
+      ctf: ctfName,
+      status: "Planned",
+      uid: uid,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Error adding progress:", error);
+    alert("Error adding CTF. Check Firestore rules.");
   }
 }
 
