@@ -146,14 +146,20 @@ function loadUpcomingCTFs() {
         
         const duration = ctf.duration.days + (ctf.duration.hours > 0 ? ` days ${ctf.duration.hours}h` : " days");
         
+        const truncatedDesc = ctf.description ? 
+          (ctf.description.length > 150 ? ctf.description.substring(0, 150) + "..." : ctf.description) : 
+          "No description available";
+        
         const item = document.createElement("li");
+        item.style.cursor = "pointer";
         item.innerHTML = `
           <div>
-            <strong><a href="${ctf.url}" target="_blank">${ctf.title}</a></strong><br>
+            <strong>${ctf.title}</strong><br>
             <small>${cdtTime} • ${duration}</small><br>
-            <em>${ctf.description || "No description available"}</em>
+            <em>${truncatedDesc}</em>
           </div>
         `;
+        item.addEventListener("click", () => window.open(ctf.url, "_blank"));
         ctfList.appendChild(item);
       });
     })
