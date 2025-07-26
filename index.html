@@ -48,8 +48,8 @@
         <select id="snapshot-select" style="width: 60%; margin-right: 5%; padding: 12px;">
           <option value="">Select snapshot to load...</option>
         </select>
-        <button onclick="loadSnapshot()" style="padding: 12px 20px;">Load Snapshot</button>
-        <button onclick="leaveTeam()">Leave Team</button>
+        <button onclick="loadSnapshot()" style="padding: 12px 20px;">Load Snapshot</button><br><br>
+        <button onclick="leaveTeam()" style="width: 60%; margin-right: 5%; padding: 12px;">Leave Team</button>
       </div>
       <div class="resize-handle"></div>
     </section>
@@ -57,7 +57,9 @@
     <section id="tickets-section" data-module="tickets">
       <h2>Support Tickets <button class="minimize-btn" onclick="minimizeModule('tickets-section')">−</button></h2>
       <div id="ticket-create">
-        <input id="ticket-email" placeholder="User email" style="width: 45%; margin-right: 5%;" />
+        <label for="ticket-email">Cut Ticket To:</label>
+        <input id="ticket-email" placeholder="User email" style="width: 45%; margin-right: 5%;" /><br>
+        <label for="ticket-email">Subject Line: </label>
         <input id="ticket-subject" placeholder="Subject" style="width: 45%; margin-right: 5%;" />
         <textarea id="ticket-description" placeholder="Description" style="width: 100%; height: 60px; margin: 10px 0; padding: 10px; border: 2px solid #e7e8e9; border-radius: 5px; resize: vertical;"></textarea>
         <button onclick="createTicket()">Create Ticket</button>
@@ -72,6 +74,7 @@
         <li><a href="https://discord.gg/jWWA5VkHxW" target="_blank">Discord Server</a></li>
         <li><a href="https://www.notion.so/HACC-Capture-The-Flag-22fa08af412b80118068d0424b1dd691" target="_blank">Introduction To CTFs</a></li>
         <li><a href="https://www.notion.so/HACC-CTF-Tools-and-Resources-22fa08af412b8013b6cad1141ed4931f" target="_blank">Tools & Resources</a></li>
+        <li><a href="https://github.com/swisskyrepo/PayloadsAllTheThings" target="_blank">Payloads All The Things</a></li>
       </ul>
       <div class="resize-handle"></div>
     </section>

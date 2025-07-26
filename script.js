@@ -61,8 +61,9 @@ function loadUserNotes(uid) {
         li.style.color = "#e53e3e";
       });
       li.addEventListener("mouseleave", () => {
-        li.style.backgroundColor = "#f7fafc";
-        li.style.color = "#333";
+        const isDark = document.body.classList.contains("dark");
+        li.style.backgroundColor = isDark ? "#1f2430" : "#f7fafc";
+        li.style.color = isDark ? "#bfbdb6" : "#333";
       });
       li.addEventListener("click", async () => {
         if (confirm("Delete this note?")) {
@@ -433,22 +434,27 @@ function startDrag(e) {
   
   e.preventDefault();
   draggedElement = e.currentTarget;
-  const rect = draggedElement.getBoundingClientRect();
-  const offsetX = e.clientX - rect.left;
-  const offsetY = e.clientY - rect.top;
+  const offsetX = e.clientX - parseInt(draggedElement.style.left || 0);
+  const offsetY = e.clientY - parseInt(draggedElement.style.top || 0);
   
   function drag(e) {
     if (draggedElement) {
-      const newLeft = snapToGrid(e.clientX - offsetX);
-      const newTop = snapToGrid(e.clientY - offsetY);
+      const newLeft = e.clientX - offsetX;
+      const newTop = e.clientY - offsetY;
       
-      draggedElement.style.left = `${Math.max(0, newLeft)}px`;
-      draggedElement.style.top = `${Math.max(0, newTop)}px`;
+      draggedElement.style.left = `${newLeft}px`;
+      draggedElement.style.top = `${newTop}px`;
     }
   }
   
   function stopDrag() {
     if (draggedElement) {
+      // Snap to grid on drop
+      const currentLeft = parseInt(draggedElement.style.left);
+      const currentTop = parseInt(draggedElement.style.top);
+      draggedElement.style.left = `${snapToGrid(currentLeft)}px`;
+      draggedElement.style.top = `${snapToGrid(currentTop)}px`;
+      
       saveLayout();
       draggedElement = null;
     }
