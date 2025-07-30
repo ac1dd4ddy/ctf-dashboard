@@ -118,14 +118,14 @@
   </div>
 
   <div id="team-login" style="position: fixed; top: 20px; right: 150px; background: #fcfcfc; padding: 10px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none;">
-    <input id="global-team-name" placeholder="Team name" style="width: 120px; margin-right: 5px; padding: 8px; font-size: 14px;" />
-    <input id="global-team-password" type="password" placeholder="Password" style="width: 120px; margin-right: 5px; padding: 8px; font-size: 14px;" />
+    <input id="global-team-name" placeholder="Team ID or name for new team" style="width: 200px; margin-right: 5px; padding: 8px; font-size: 14px;" />
     <button onclick="joinGlobalTeam()" style="padding: 8px 12px; font-size: 14px;">Join</button>
     <button onclick="createGlobalTeam()" style="padding: 8px 12px; font-size: 14px;">Create</button>
   </div>
   <div id="team-status" style="position: fixed; top: 20px; right: 150px; background: #e6f7ff; padding: 10px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none;">
     <span id="team-status-text"></span>
-    <button onclick="leaveGlobalTeam()" style="padding: 4px 8px; margin-left: 10px; font-size: 12px; background: #ff4757;">Leave</button>
+    <button id="copy-team-btn" onclick="copyTeamId()" style="padding: 4px 8px; margin-left: 10px; font-size: 12px;">Copy ID</button>
+    <button onclick="leaveGlobalTeam()" style="padding: 4px 8px; margin-left: 5px; font-size: 12px; background: #ff4757;">Leave</button>
   </div>
   <button id="theme-toggle" style="position: fixed; top: 20px; left: 20px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🌙</button>
   <a href="help.html" style="position: fixed; top: 20px; left: 80px; padding: 10px 15px; background: #ff8f40; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none;">❓ Help</a>

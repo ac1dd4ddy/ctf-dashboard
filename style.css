@@ -237,12 +237,31 @@ body.dark #team-login button:hover {
   background: #ff8f40 !important;
 }
 
-body.dark #team-status button {
+#copy-team-btn {
+  background: #39bae6 !important;
+  color: white !important;
+}
+
+#copy-team-btn:hover {
+  background: #73d0ff !important;
+}
+
+body.dark #copy-team-btn {
+  background: #39bae6 !important;
+  color: white !important;
+}
+
+body.dark #copy-team-btn:hover {
+  background: #73d0ff !important;
+  color: white !important;
+}
+
+body.dark #team-status button:not(#copy-team-btn) {
   background: #ff4757 !important;
   color: white !important;
 }
 
-body.dark #team-status button:hover {
+body.dark #team-status button:not(#copy-team-btn):hover {
   background: #d73a49 !important;
 }
 

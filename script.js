@@ -235,41 +235,33 @@ function loadUpcomingCTFs() {
     .catch(console.error);
 }
 
-// Consolidated team system
+// UUID-based team system
 window.createGlobalTeam = async function() {
   const teamName = document.getElementById("global-team-name").value.trim();
-  const password = document.getElementById("global-team-password").value;
   
-  if (!teamName || !password || teamName.length < 3 || password.length < 6) {
-    alert("Team name must be at least 3 characters and password at least 6 characters");
-    return;
-  }
-  
-  if (!/^[a-zA-Z0-9_-]+$/.test(teamName)) {
-    alert("Team name can only contain letters, numbers, hyphens, and underscores");
+  if (!teamName || teamName.length < 3) {
+    alert("Team name must be at least 3 characters");
     return;
   }
   
   try {
-    const teamDoc = await getDoc(doc(db, "teams", teamName));
-    if (teamDoc.exists()) {
-      alert("Team already exists");
-      return;
-    }
+    const teamId = crypto.randomUUID();
     
-    await setDoc(doc(db, "teams", teamName), {
-      password: password,
+    await setDoc(doc(db, "teams", teamId), {
+      name: teamName,
       content: "",
       createdAt: serverTimestamp(),
       createdBy: auth.currentUser.uid
     });
     
-    await setDoc(doc(db, "team_challenges", teamName), {
+    await setDoc(doc(db, "team_challenges", teamId), {
       challenges: [],
       members: [auth.currentUser.email],
       createdAt: serverTimestamp()
     });
     
+    alert(`Team created! Share this ID: ${teamId}`);
+    document.getElementById("global-team-name").value = teamId;
     joinGlobalTeam();
   } catch (error) {
     console.error("Error creating team:", error);
@@ -278,23 +270,22 @@ window.createGlobalTeam = async function() {
 };
 
 window.joinGlobalTeam = async function() {
-  const teamName = document.getElementById("global-team-name").value.trim();
-  const password = document.getElementById("global-team-password").value;
+  const teamId = document.getElementById("global-team-name").value.trim();
   
-  if (!teamName || !password) {
-    alert("Please enter team name and password");
+  if (!teamId) {
+    alert("Please enter team ID");
     return;
   }
   
   try {
-    const teamDoc = await getDoc(doc(db, "teams", teamName));
-    if (teamDoc.exists() && teamDoc.data().password === password) {
-      currentTeam = teamName;
-      updateTeamUI(true);
-      initializeAllTeamModules(teamName);
-      await saveUserTeamState(auth.currentUser.uid, teamName);
+    const teamDoc = await getDoc(doc(db, "teams", teamId));
+    if (teamDoc.exists()) {
+      currentTeam = teamId;
+      updateTeamUI(true, teamDoc.data().name);
+      initializeAllTeamModules(teamId);
+      await saveUserTeamState(auth.currentUser.uid, teamId);
     } else {
-      alert("Invalid team name or password");
+      alert("Invalid team ID");
     }
   } catch (error) {
     console.error("Error joining team:", error);
@@ -313,7 +304,17 @@ window.leaveGlobalTeam = async function() {
   }
 };
 
-function updateTeamUI(isLoggedIn) {
+window.copyTeamId = function() {
+  if (currentTeam) {
+    navigator.clipboard.writeText(currentTeam).then(() => {
+      alert('Team ID copied to clipboard!');
+    }).catch(() => {
+      prompt('Copy this Team ID:', currentTeam);
+    });
+  }
+};
+
+function updateTeamUI(isLoggedIn, teamName = null) {
   const loginDiv = document.getElementById("team-login");
   const statusDiv = document.getElementById("team-status");
   const statusText = document.getElementById("team-status-text");
@@ -321,9 +322,8 @@ function updateTeamUI(isLoggedIn) {
   if (isLoggedIn) {
     loginDiv.style.display = "none";
     statusDiv.style.display = "block";
-    statusText.textContent = `Team: ${currentTeam}`;
+    statusText.innerHTML = `<strong>${teamName || 'Team'}</strong><br><small style="font-family: monospace; color: #666;">${currentTeam}</small>`;
     document.getElementById("global-team-name").value = "";
-    document.getElementById("global-team-password").value = "";
   } else {
     loginDiv.style.display = "block";
     statusDiv.style.display = "none";
@@ -479,10 +479,7 @@ window.addChallenge = async function() {
     return;
   }
   
-  if (!/^[a-zA-Z0-9_\s-]+$/.test(challengeName)) {
-    alert("Challenge name can only contain letters, numbers, spaces, hyphens, and underscores");
-    return;
-  }
+
   
   try {
     const teamChallengesRef = doc(db, "team_challenges", currentTeam);
@@ -532,17 +529,38 @@ function updateChallengesList(challenges) {
   challenges.forEach(challenge => {
     const div = document.createElement("div");
     div.className = "challenge-item";
-    div.innerHTML = `
-      <strong>${challenge.name}</strong><br>
-      <small>Assigned to: ${challenge.assignedTo} | Status: ${challenge.status}</small><br>
-      <small>Created by: ${challenge.createdBy}</small>
-      <button onclick="toggleChallengeStatus('${challenge.id}')" style="margin-top: 5px; padding: 4px 8px; font-size: 12px;">
-        Mark as ${challenge.status === 'Open' ? 'Completed' : 'Open'}
-      </button>
-      <button onclick="deleteChallenge('${challenge.id}')" style="margin-top: 5px; margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #ff4757;">
-        Delete
-      </button>
-    `;
+    
+    const name = document.createElement("strong");
+    name.textContent = challenge.name;
+    
+    const br1 = document.createElement("br");
+    
+    const assignInfo = document.createElement("small");
+    assignInfo.textContent = `Assigned to: ${challenge.assignedTo} | Status: ${challenge.status}`;
+    
+    const br2 = document.createElement("br");
+    
+    const createdInfo = document.createElement("small");
+    createdInfo.textContent = `Created by: ${challenge.createdBy}`;
+    
+    const toggleBtn = document.createElement("button");
+    toggleBtn.textContent = `Mark as ${challenge.status === 'Open' ? 'Completed' : 'Open'}`;
+    toggleBtn.style.cssText = "margin-top: 5px; padding: 4px 8px; font-size: 12px;";
+    toggleBtn.onclick = () => toggleChallengeStatus(challenge.id);
+    
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.style.cssText = "margin-top: 5px; margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #ff4757;";
+    deleteBtn.onclick = () => deleteChallenge(challenge.id);
+    
+    div.appendChild(name);
+    div.appendChild(br1);
+    div.appendChild(assignInfo);
+    div.appendChild(br2);
+    div.appendChild(createdInfo);
+    div.appendChild(toggleBtn);
+    div.appendChild(deleteBtn);
+    
     list.appendChild(div);
   });
 }
@@ -631,26 +649,64 @@ function loadUserTickets(email) {
         
         const div = document.createElement("div");
         div.className = "ticket-item";
-        div.innerHTML = `
-          <div class="ticket-header">
-            <div>
-              <strong>${ticket.subject}</strong>
-              <small style="display: block; color: #666;">${type === 'created' ? `To: ${ticket.assignedTo}` : `From: ${ticket.createdByEmail}`}</small>
-            </div>
-            <span class="ticket-status ${ticket.status === 'open' ? 'status-open' : 'status-resolved'}">${ticket.status.toUpperCase()}</span>
-          </div>
-          <p style="margin: 10px 0; color: #666;">${ticket.description}</p>
-          <div class="ticket-messages" id="messages-${ticketId}"></div>
-          ${ticket.status === 'open' ? `
-            <div class="ticket-reply">
-              <input id="comment-${ticketId}" placeholder="Add a comment..." style="flex: 1; margin-right: 10px;" />
-              <button onclick="addComment('${ticketId}')" style="padding: 8px 12px;">Comment</button>
-              <button onclick="resolveTicket('${ticketId}')" style="background: #38a169; padding: 8px 12px;">Resolve</button>
-            </div>
-          ` : `
-            <button onclick="deleteTicket('${ticketId}')" style="background: #e53e3e; margin-top: 10px;">Delete</button>
-          `}
-        `;
+        
+        const header = document.createElement("div");
+        header.className = "ticket-header";
+        
+        const headerLeft = document.createElement("div");
+        const subject = document.createElement("strong");
+        subject.textContent = ticket.subject;
+        const small = document.createElement("small");
+        small.style.cssText = "display: block; color: #666;";
+        small.textContent = type === 'created' ? `To: ${ticket.assignedTo}` : `From: ${ticket.createdByEmail}`;
+        headerLeft.appendChild(subject);
+        headerLeft.appendChild(small);
+        
+        const status = document.createElement("span");
+        status.className = `ticket-status ${ticket.status === 'open' ? 'status-open' : 'status-resolved'}`;
+        status.textContent = ticket.status.toUpperCase();
+        
+        header.appendChild(headerLeft);
+        header.appendChild(status);
+        
+        const desc = document.createElement("p");
+        desc.style.cssText = "margin: 10px 0; color: #666;";
+        desc.textContent = ticket.description;
+        
+        const messages = document.createElement("div");
+        messages.className = "ticket-messages";
+        messages.id = `messages-${ticketId}`;
+        
+        div.appendChild(header);
+        div.appendChild(desc);
+        div.appendChild(messages);
+        
+        if (ticket.status === 'open') {
+          const reply = document.createElement("div");
+          reply.className = "ticket-reply";
+          const input = document.createElement("input");
+          input.id = `comment-${ticketId}`;
+          input.placeholder = "Add a comment...";
+          input.style.cssText = "flex: 1; margin-right: 10px;";
+          const commentBtn = document.createElement("button");
+          commentBtn.textContent = "Comment";
+          commentBtn.style.cssText = "padding: 8px 12px;";
+          commentBtn.onclick = () => addComment(ticketId);
+          const resolveBtn = document.createElement("button");
+          resolveBtn.textContent = "Resolve";
+          resolveBtn.style.cssText = "background: #38a169; padding: 8px 12px;";
+          resolveBtn.onclick = () => resolveTicket(ticketId);
+          reply.appendChild(input);
+          reply.appendChild(commentBtn);
+          reply.appendChild(resolveBtn);
+          div.appendChild(reply);
+        } else {
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "Delete";
+          deleteBtn.style.cssText = "background: #e53e3e; margin-top: 10px;";
+          deleteBtn.onclick = () => deleteTicket(ticketId);
+          div.appendChild(deleteBtn);
+        }
         ticketsList.appendChild(div);
         
         // Load comments for this ticket
@@ -671,11 +727,21 @@ function loadTicketComments(ticketId) {
         ticket.comments.forEach(comment => {
           const commentDiv = document.createElement("div");
           commentDiv.className = "message";
-          commentDiv.innerHTML = `
-            <div class="message-author">${comment.author}</div>
-            <div>${comment.text}</div>
-            <small style="color: #666;">${comment.timestamp?.toDate ? comment.timestamp.toDate().toLocaleString() : 'Just now'}</small>
-          `;
+          
+          const author = document.createElement("div");
+          author.className = "message-author";
+          author.textContent = comment.author;
+          
+          const text = document.createElement("div");
+          text.textContent = comment.text;
+          
+          const timestamp = document.createElement("small");
+          timestamp.style.color = "#666";
+          timestamp.textContent = comment.timestamp?.toDate ? comment.timestamp.toDate().toLocaleString() : 'Just now';
+          
+          commentDiv.appendChild(author);
+          commentDiv.appendChild(text);
+          commentDiv.appendChild(timestamp);
           messagesContainer.appendChild(commentDiv);
         });
       }
@@ -696,6 +762,13 @@ window.addComment = async function(ticketId) {
     
     if (ticketDoc.exists()) {
       const ticket = ticketDoc.data();
+      
+      // Only allow creator or assignee to comment
+      if (ticket.createdByEmail !== user.email && ticket.assignedTo !== user.email) {
+        alert("You can only comment on tickets you created or are assigned to");
+        return;
+      }
+      
       const comments = ticket.comments || [];
       
       comments.push({
@@ -758,11 +831,24 @@ window.resolveTicket = async function(ticketId) {
   if (!user) return;
   
   try {
-    await updateDoc(doc(db, "tickets", ticketId), {
-      status: "resolved",
-      resolvedAt: serverTimestamp(),
-      resolvedBy: user.email
-    });
+    const ticketRef = doc(db, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      
+      // Only assignee can resolve tickets
+      if (ticket.assignedTo !== user.email) {
+        alert("Only the assigned user can resolve this ticket");
+        return;
+      }
+      
+      await updateDoc(ticketRef, {
+        status: "resolved",
+        resolvedAt: serverTimestamp(),
+        resolvedBy: user.email
+      });
+    }
   } catch (error) {
     console.error("Error resolving ticket:", error);
     alert("Error resolving ticket");
@@ -776,7 +862,20 @@ window.deleteTicket = async function(ticketId) {
   if (!confirm("Are you sure you want to delete this ticket?")) return;
   
   try {
-    await deleteDoc(doc(db, "tickets", ticketId));
+    const ticketRef = doc(db, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+    
+    if (ticketDoc.exists()) {
+      const ticket = ticketDoc.data();
+      
+      // Only creator can delete tickets
+      if (ticket.createdByEmail !== user.email) {
+        alert("Only the ticket creator can delete this ticket");
+        return;
+      }
+      
+      await deleteDoc(ticketRef);
+    }
   } catch (error) {
     console.error("Error deleting ticket:", error);
     alert("Error deleting ticket");
@@ -798,14 +897,14 @@ async function loadUserTeamState(uid) {
   try {
     const stateDoc = await getDoc(doc(db, "userTeamStates", uid));
     if (stateDoc.exists() && stateDoc.data().currentTeam) {
-      const teamName = stateDoc.data().currentTeam;
+      const teamId = stateDoc.data().currentTeam;
       
       // Verify team still exists and user has access
-      const teamDoc = await getDoc(doc(db, "teams", teamName));
+      const teamDoc = await getDoc(doc(db, "teams", teamId));
       if (teamDoc.exists()) {
-        currentTeam = teamName;
-        updateTeamUI(true);
-        initializeAllTeamModules(teamName);
+        currentTeam = teamId;
+        updateTeamUI(true, teamDoc.data().name);
+        initializeAllTeamModules(teamId);
       } else {
         // Team no longer exists, clear state
         await saveUserTeamState(uid, null);
